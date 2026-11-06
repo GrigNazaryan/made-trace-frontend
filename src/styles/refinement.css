@@ -1,0 +1,41 @@
+/* Shared interaction surfaces: one scroller per popover, bounded to the viewport. */
+.select-popover{overflow:hidden;display:flex;flex-direction:column;max-width:calc(100vw - 24px)}
+.select-popover>[role=listbox]{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;min-height:0}
+.select-search{flex-shrink:0;box-sizing:border-box;margin:0 0 6px}
+.select-trigger{position:relative;padding-right:30px;display:block;text-overflow:ellipsis}
+.select-trigger:after{position:absolute;right:12px;top:50%;transform:translateY(-50%)}
+.workspace-picker .select-trigger{white-space:nowrap;font-size:12px;min-height:42px}
+.font-popover .select-option{font-size:17px;min-height:48px;padding:11px 12px}
+.font-sample{float:right;color:#97a2b2;font-size:15px;letter-spacing:.5px;margin-left:8px}
+.font-popover .select-option[aria-selected=true]:after{display:none}
+.date-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:44px;text-align:left;padding:11px 13px;border:1px solid #dfe5ed;border-radius:12px;background:#fff;color:#35465d;font:inherit;font-size:12px;cursor:pointer}
+.date-trigger:after{content:'▦';color:#8796a8;font-size:16px}
+.date-trigger[aria-expanded=true]{border-color:#87aaf0;box-shadow:0 0 0 3px #edf3ff}
+.date-popover{position:fixed;z-index:310;border:1px solid #e1e7ef;background:#fff;border-radius:18px;padding:12px;box-shadow:0 16px 60px #20385826;box-sizing:border-box;max-height:calc(100dvh - 24px);overflow-y:auto}
+.date-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px}
+.date-heading strong{font-size:13px;font-weight:650}.date-popover button{border:0;background:transparent;color:#40516a;cursor:pointer;font-family:inherit}
+.date-heading button{width:34px;height:34px;border-radius:10px;font-size:23px}.date-heading button:hover{background:#f0f4fa}
+.date-weekdays,.date-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.date-weekdays{font-size:10px;color:#8492a5;text-align:center;margin-bottom:7px}.date-weekdays span{padding:3px}
+.date-grid .date-day{min-height:31px;border-radius:9px;font-size:12px;font-variant-numeric:tabular-nums;position:relative;padding:5px}
+.date-day.outside-month{color:#adb5c1}.date-day:hover{background:#eef3fa}.date-day.today:after{content:'';width:4px;height:4px;border-radius:50%;position:absolute;bottom:3px;left:calc(50% - 2px);background:currentColor}
+.date-day.selected{background:#2767df;color:#fff;font-weight:650}.date-day:disabled{opacity:.35;cursor:default}
+.date-footer{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #eef1f6;padding-top:9px;margin-top:10px}.date-footer button{padding:5px 8px;font-size:11px;color:#3868b6}
+.date-popover button:focus-visible,.select-trigger:focus-visible,.date-trigger:focus-visible{outline:2px solid #83a9ed;outline-offset:2px}
+.calendar-period{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}.calendar-period h3{margin:0;font-size:19px}.calendar-toolbar>.row{align-self:end;padding-bottom:4px}
+.calendar-weekdays{display:grid;grid-template-columns:repeat(7,minmax(108px,1fr));min-width:770px;text-align:center;padding:9px 0 12px;font-size:10px;font-weight:600;color:#7f8da1}.calendar-grid:not(.single-day) .calendar-day>time{font-size:13px;font-variant-numeric:tabular-nums}.calendar-grid .calendar-day.today>time{background:#e6efff;border-radius:7px;width:max-content;padding:2px 5px}
+.calendar-toolbar .btn{white-space:nowrap}.calendar-day.today>time{color:#2867d8;font-weight:700}
+.schedule-panel h3,.catalog-layout h3,.profile-card h3,.workspace-heading h2{display:flex;gap:9px;align-items:center}.schedule-panel h3 .ui-icon,.catalog-layout h3 .ui-icon,.profile-card h3 .ui-icon,.workspace-heading h2 .ui-icon{color:#6985aa;width:21px;height:21px}
+.schedule-panel h4{font-size:13px;margin:8px 0 18px}.schedule-panel textarea{min-height:78px}
+.workflow-actions{margin-bottom:19px}.approval-checks{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.approval-checks>span{display:flex;align-items:center;gap:5px;background:#f3f5f8;color:#7a8798;padding:7px 9px;border-radius:9px;font-size:10px}.approval-checks .ui-icon{width:14px;height:14px}.approval-checks .satisfied{color:#398466;background:#edf7f1}
+.advanced-status{border-top:1px solid #ebeff5;padding-top:14px}.advanced-status>summary{font-size:12px;font-weight:600;color:#667b99;cursor:pointer;margin-bottom:16px}.advanced-status[open]>summary{margin-bottom:20px}
+.bulk-shortcut{margin-bottom:22px;max-width:100%;white-space:normal;text-align:left}.bulk-pricing{scroll-margin-top:92px}.bulk-pricing:focus{outline:none}.bulk-pricing:focus-visible{outline:2px solid #9abcf6}
+.catalog-layout .product-picture{max-width:100%;border-radius:14px;background:#f2f4f7;height:180px;margin-bottom:14px}.catalog-layout .compact-upload{min-height:114px}.catalog-layout .compact-upload>.ui-icon{width:22px;height:22px;padding:0}
+.custom-product-image img{position:absolute;inset:6%;width:88%;height:88%;max-width:100%;max-height:100%;object-fit:contain}.reference-product{display:grid;place-items:center;background:#f0f3f7;color:#8c9db4}.reference-product svg{width:42%;height:42%;max-width:80px;max-height:80px}
+.reference-designer .product-picture{height:220px;border-radius:16px;background:#f1f4f8;display:grid;place-items:center;margin-bottom:24px}.reference-designer .garment-thumbnail{width:210px;height:210px}
+.print-specifications{font-size:11px;color:#7c899b;border-radius:10px}.print-specifications summary{cursor:pointer;line-height:1.5;font-weight:550}.print-specifications[open]{background:#f5f7fa;padding:12px}.print-specifications p{font-size:10px;line-height:1.6;margin:9px 0 0}.catalog-layout .print-specifications{margin:18px 0}.catalog-layout .print-specifications h4{font-size:12px;margin-bottom:12px}.editor-measurements{align-items:flex-start;gap:12px}.editor-measurements .print-specifications{max-width:70%}
+.editor-canvas-shell{background:#e8ecf0}.editor-presentation{margin-bottom:12px}.editor-sub{line-height:1.65}.product-option{transition:border-color .15s,box-shadow .15s}.product-option:hover{border-color:#a6bce1}.product-option.selected{box-shadow:0 0 0 1px #74a2ed,0 5px 18px #235baf0b}
+.public-contact{display:flex;flex-wrap:wrap;gap:10px 20px;margin:18px 0;font-size:12px}.public-contact a{overflow-wrap:anywhere;display:inline-flex;align-items:center;gap:6px}.public-contact .ui-icon{width:15px;height:15px}
+@media(max-width:800px){.catalog-layout{grid-template-columns:1fr}.calendar-toolbar>.row{flex-basis:100%}.calendar-toolbar>.row .btn{flex:1}.workspace-heading>.btn{margin:10px 0}.catalog-layout>.stack{gap:16px}}
+@media(max-width:540px){.date-popover{max-width:calc(100vw - 24px)}.calendar-period h3{font-size:16px}.calendar-period .chip{font-size:10px}.calendar-toolbar .btn{font-size:10px;padding:9px}.catalog-layout .product-picture{height:160px}.calendar-toolbar{gap:12px}.editor-measurements .print-specifications{max-width:64%}.workspace-heading>.btn{white-space:normal;flex-wrap:wrap;text-align:left}}
+@media(prefers-reduced-motion:reduce){.product-option{transition:none}}
