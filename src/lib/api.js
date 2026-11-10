@@ -18,8 +18,8 @@ let refreshInFlight = null;
 let impersonating = false;
 export function getToken() { return memoryToken; }
 export function setToken(token) {
-  memoryToken=token||"";memoryIdentity="";
-  try{memoryIdentity=JSON.parse(atob(memoryToken.split(".")[1].replaceAll("-","+").replaceAll("_","/"))).sub||"";}catch{}
+  memoryToken = token || ""; memoryIdentity = "";
+  try { memoryIdentity = JSON.parse(atob(memoryToken.split(".")[1].replaceAll("-", "+").replaceAll("_", "/"))).sub || ""; } catch { }
   localStorage.removeItem(TOKEN_KEY);
 }
 export function setImpersonating(value) { impersonating = value; }
@@ -29,6 +29,7 @@ export async function restoreSession() {
     .finally(() => { refreshInFlight = null; });
   return refreshInFlight;
 }
+
 
 async function request(method, path, { body, params, retried = false } = {}) {
   if (!BASE_URL) {
@@ -67,11 +68,13 @@ async function request(method, path, { body, params, retried = false } = {}) {
 
   if (!response.ok) {
     const code = (data && (data.detail?.code || data.detail)) || `http_${response.status}`;
-    if (response.status === 401 && !["/api/auth/login","/api/auth/admin-login","/api/auth/register","/api/auth/refresh","/api/auth/logout","/api/auth/forgot-password","/api/auth/reset-password"].includes(path) && !retried && !impersonating) {
-      const expectedIdentity=memoryIdentity;
-      try { const session=await restoreSession();
-        if(expectedIdentity && session.user?.id!==expectedIdentity)throw new ApiError("account_changed",401);
-        return request(method, path, {body, params, retried:true}); }
+    if (response.status === 401 && !["/api/auth/login", "/api/auth/admin-login", "/api/auth/register", "/api/auth/refresh", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password"].includes(path) && !retried && !impersonating) {
+      const expectedIdentity = memoryIdentity;
+      try {
+        const session = await restoreSession();
+        if (expectedIdentity && session.user?.id !== expectedIdentity) throw new ApiError("account_changed", 401);
+        return request(method, path, { body, params, retried: true });
+      }
       catch (error) {
         if (error.status === 401) { setToken(""); window.dispatchEvent(new Event("madetrace:session-ended")); }
         throw error;
@@ -95,7 +98,20 @@ export const api = {
   me: () => get("/api/auth/me"),
   changePassword: (body) => post("/api/auth/change-password", body),
   bootstrapAdmin: (body) => post("/api/auth/bootstrap-admin", body),
-
+  // Внутри api.js
+  async googleLogin(payload) {
+    const response = await fetch(`${BASE_URL}/api/auth/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw { status: response.status, code: err.detail || "google_login_failed" };
+    }
+    return response.json(); // Ожидает { accessToken, user }
+  },
   restoreSession,
   authOptions: () => get("/api/auth/options"),
   logout: () => post("/api/auth/logout"),
