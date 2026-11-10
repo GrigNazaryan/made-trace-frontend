@@ -98,20 +98,7 @@ export const api = {
   me: () => get("/api/auth/me"),
   changePassword: (body) => post("/api/auth/change-password", body),
   bootstrapAdmin: (body) => post("/api/auth/bootstrap-admin", body),
-  // Внутри api.js
-  async googleLogin(payload) {
-    const response = await fetch(`${BASE_URL}/api/auth/google`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw { status: response.status, code: err.detail || "google_login_failed" };
-    }
-    return response.json(); // Ожидает { accessToken, user }
-  },
+  googleLogin: (body) => post("/api/auth/google", body), // <--- Используем стандартный post вместо fetch вручную
   restoreSession,
   authOptions: () => get("/api/auth/options"),
   logout: () => post("/api/auth/logout"),
