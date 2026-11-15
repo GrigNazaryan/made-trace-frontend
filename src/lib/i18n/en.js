@@ -87,6 +87,8 @@ export default {
   err_workshop_unavailable: "This workshop isn't accepting orders right now.",
   err_order_not_found: "Order not found.",
   err_forbidden: "You don't have access to this.",
+  err_no_artwork: "No uploaded artwork images found on this order.",
+  err_proof_stale_quote: "The price changed after this proof was sent. Ask the workshop to resend the proof before approving it.",
   err_growth_required: "This feature is part of the Growth plan.",
 
   // --- directory / storefront ------------------------------------------------

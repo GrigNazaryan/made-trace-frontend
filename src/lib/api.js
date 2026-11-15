@@ -1,7 +1,7 @@
 // Thin fetch wrapper around the FastAPI backend. Every function here returns parsed JSON
 // or throws an ApiError whose `.code` is the machine-readable string the backend sent
 // (e.g. "quote_outdated", "invalid:email") — i18n.js turns that into user-facing text.
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+export const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const TOKEN_KEY = "madetrace_token";
 
 export class ApiError extends Error {
@@ -85,6 +85,31 @@ async function request(method, path, { body, params, retried = false } = {}) {
   return data;
 }
 
+// Binary download (zip) — separate from request() because that always parses JSON,
+// and needs the in-memory Bearer token attached by hand since this is a real fetch()
+// (a plain <a href> navigation can't carry a token that only lives in JS memory).
+export async function downloadArtwork(orderNumber) {
+  const headers = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await fetch(`${BASE_URL}/api/workspace/orders/${orderNumber}/artwork.zip`,
+    { credentials: "include", headers });
+  if (!response.ok) {
+    let code = `http_${response.status}`;
+    try { code = (await response.json())?.detail || code; } catch { /* non-JSON error body */ }
+    throw new ApiError(typeof code === "string" ? code : JSON.stringify(code), response.status);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${orderNumber}-artwork.zip`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 const get = (path, params) => request("GET", path, { params });
 const post = (path, body) => request("POST", path, { body: body ?? {} });
 const put = (path, body) => request("PUT", path, { body: body ?? {} });
@@ -106,7 +131,6 @@ export const api = {
   forgotPassword: (body) => post("/api/auth/forgot-password", body),
   resetPassword: (body) => post("/api/auth/reset-password", body),
   deleteAccount: (body) => post("/api/auth/delete-account", body),
-  googleStart: () => post("/api/auth/google/start"),
   continuation: () => get("/api/auth/continuation"),
   saveContinuation: (body) => put("/api/auth/continuation", body),
   clearContinuation: () => del("/api/auth/continuation"),
@@ -157,6 +181,9 @@ export const api = {
   reports: () => get("/api/workspace/reports"),
 
   // --- billing --------------------------------------------------------------
+  // --- uploads (private bucket; see backend/app/storage.py) -----------------
+  signUpload: (body) => post("/api/uploads/sign", body),
+
   billingInfo: () => get("/api/billing/info"),
   listPayments: () => get("/api/billing/payments"),
   createPayment: (body) => post("/api/billing/payments", body),

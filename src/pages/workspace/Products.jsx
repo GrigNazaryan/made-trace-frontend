@@ -344,6 +344,7 @@ export default function Products() {
       {editingId && (
         <div style={{ marginBottom: 20 }}>
           <ProductForm
+            key={editingId}
             initial={editingId === "new" ? emptyForm() : toFormValues(products.find((p) => p.id === editingId))}
             t={t}
             busy={busy}

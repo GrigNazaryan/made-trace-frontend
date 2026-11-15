@@ -2,7 +2,7 @@ import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
 import { api } from "../../lib/api.js";
-import { uploadToStorage } from "../../lib/supabaseClient.js";
+import { uploadToPrivateStorage } from "../../lib/privateUpload.js";
 import WorkspaceLayout from "./WorkspaceLayout.jsx";
 
 function NewPaymentForm({ info, t, onCreated }) {
@@ -65,8 +65,8 @@ function PaymentRow({ p, t, formatMoney, formatDate, onUpdated }) {
       let receiptUrl = null;
       const file = fileRef.current?.files?.[0];
       if (file) {
-        const { url } = await uploadToStorage(file, "receipts");
-        receiptUrl = url;
+        const { path } = await uploadToPrivateStorage(file, "receipt");
+        receiptUrl = path;
       }
       const updated = await api.submitPayment(p.id, { payerNote: note, receiptUrl });
       onUpdated(updated);

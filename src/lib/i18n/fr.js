@@ -85,6 +85,8 @@ export default {
   err_workshop_unavailable: "Cet atelier n'accepte pas de commandes pour le moment.",
   err_order_not_found: "Commande introuvable.",
   err_forbidden: "Vous n'avez pas accès à cette ressource.",
+  err_no_artwork: "Aucune image d'illustration téléchargée n'a été trouvée sur cette commande.",
+  err_proof_stale_quote: "Le prix a changé depuis l'envoi de cette maquette. Demandez à l'atelier de la renvoyer avant de l'approuver.",
   err_growth_required: "Cette fonctionnalité fait partie du plan Growth.",
   err_admin_use_admin_login: "Ceci est un compte administrateur — veuillez utiliser la page de connexion administrateur.",
   err_admin_already_exists: "Un compte administrateur existe déjà. Contactez un administrateur existant ou utilisez la page de connexion administrateur.",

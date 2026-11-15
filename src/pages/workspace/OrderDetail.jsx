@@ -2,7 +2,7 @@ import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
 import { Link } from "../../router/HashRouter.jsx";
-import { api } from "../../lib/api.js";
+import { api, downloadArtwork } from "../../lib/api.js";
 import WorkspaceLayout from "./WorkspaceLayout.jsx";
 import DesignEditor from "../../components/DesignEditor.jsx";
 
@@ -68,6 +68,8 @@ function ProofSection({ order, t, onSent }) {
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [artworkBusy, setArtworkBusy] = useState(false);
+  const [artworkError, setArtworkError] = useState(null);
 
   async function send() {
     setBusy(true);
@@ -87,6 +89,21 @@ function ProofSection({ order, t, onSent }) {
     <section className="card pad">
       <h3>{t("ws_order_proof_section")}</h3>
       <p className="small">Proof v{order.proof?.version || 0}{order.proof?.approved ? " · approved" : ""}</p>
+      <button
+        className="btn secondary small"
+        type="button"
+        disabled={artworkBusy}
+        onClick={async () => {
+          setArtworkError(null);
+          setArtworkBusy(true);
+          try { await downloadArtwork(order.number); }
+          catch (err) { setArtworkError(errorText(t, err.code)); }
+          finally { setArtworkBusy(false); }
+        }}
+      >
+        {artworkBusy ? t("common_loading") : "Download artwork (.zip)"}
+      </button>
+      {artworkError && <div className="notice" role="alert">{artworkError}</div>}
       {error && <div className="notice" role="alert">{error}</div>}
       <div className="stack" style={{ marginTop: 10 }}>
         {order.lines.map((line) => (
