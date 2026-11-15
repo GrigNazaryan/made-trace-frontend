@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api.js";
+import { api, BASE_URL } from "../lib/api.js";
 import { useAuth } from "../lib/AuthContext.jsx";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { Link, useRoute, BackButton } from "../router/HashRouter.jsx";
@@ -7,15 +7,17 @@ import { destinationAfterAuth } from "../lib/authReturn.js";
 
 export function GoogleButton({ disabled = false }) {
   const { t } = useI18n();
-  const [options, setOptions] = useState(null), [error,setError] = useState("");
+  const [options, setOptions] = useState(null);
   useEffect(() => { api.authOptions().then(setOptions).catch(()=>setOptions({})); }, []);
   return <div style={{marginTop:16}}><button className="btn secondary block" type="button"
-    disabled={disabled || !options?.google} onClick={async()=>{
-      try { const result=await api.googleStart(); window.location.assign(result.url); }
-      catch(error){setError(errorText(t,error.code));}
+    disabled={disabled || !options?.google} onClick={() => {
+      // A real top-level navigation, not fetch(): the CSRF state cookie the
+      // backend sets on this request only survives the round trip through
+      // Google if it's written during an actual top-level visit to its domain
+      // — see the comment on google_start() in accounts.py for why.
+      window.location.assign(`${BASE_URL}/api/auth/google/start`);
     }}>{t("account_google")}</button>
-    {disabled ? <p className="small">{t("account_google_company")}</p> : options && !options.google && <p className="small">{t("account_google_setup")}</p>}
-    {error && <p className="notice" role="alert">{error}</p>}</div>;
+    {disabled ? <p className="small">{t("account_google_company")}</p> : options && !options.google && <p className="small">{t("account_google_setup")}</p>}</div>;
 }
 
 export function OAuthReturn() {

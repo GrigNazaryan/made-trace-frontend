@@ -85,6 +85,8 @@ export default {
   err_workshop_unavailable: "Diese Werkstatt nimmt derzeit keine Bestellungen an.",
   err_order_not_found: "Bestellung nicht gefunden.",
   err_forbidden: "Sie haben hierauf keinen Zugriff.",
+  err_no_artwork: "Für diese Bestellung wurden keine hochgeladenen Artwork-Bilder gefunden.",
+  err_proof_stale_quote: "Der Preis hat sich geändert, nachdem dieser Entwurf gesendet wurde. Bitten Sie die Werkstatt, den Entwurf erneut zu senden, bevor Sie ihn freigeben.",
   err_growth_required: "Diese Funktion ist Teil des Growth-Plans.",
   err_admin_use_admin_login: "Dies ist ein Admin-Konto — bitte die Admin-Anmeldeseite verwenden.",
   err_admin_already_exists: "Es existiert bereits ein Admin-Konto. Wenden Sie sich an einen bestehenden Admin oder nutzen Sie die Admin-Anmeldeseite.",

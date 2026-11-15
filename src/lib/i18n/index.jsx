@@ -14,11 +14,21 @@ export const localeCodes = { en: "en-US", ru: "ru-RU", hy: "hy-AM", de: "de-DE",
 const STORAGE_KEY = "madetrace_lang";
 const I18nContext = createContext(null);
 
+// DE/FR are selectable (see languageNames/the dropdown in App.jsx) but were added
+// as a draft machine translation, not part of the product's actual target
+// languages (ru/hy/en). Auto-detecting into one of them off a device's bare
+// navigator.language — which on a phone can easily differ from whatever the
+// person's desktop browser reports — silently lands a first-time visitor in a
+// language they never chose and that reads as nonsense. Keep auto-detect
+// scoped to the three intended languages; DE/FR stay one click away in the
+// picker for anyone who actually wants them.
+const AUTO_DETECT_LANGUAGES = ["ru", "hy", "en"];
+
 function detectDefault() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored && dictionaries[stored]) return stored;
   const nav = (navigator.language || "en").slice(0, 2);
-  return dictionaries[nav] ? nav : "en";
+  return AUTO_DETECT_LANGUAGES.includes(nav) ? nav : "en";
 }
 
 export function I18nProvider({ children }) {
