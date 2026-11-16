@@ -1,4 +1,4 @@
-import { MAX_ORDER_LINES, MAX_PRODUCT_UNITS, orderGroups, orderPayloadLines, removeDesign, splitDesign } from "../lib/orderDesigns.js";
+import { MAX_ORDER_LINES, MAX_PRODUCT_UNITS, orderGroups, orderPayloadLines, removeDesign, splitDesign, splitDesignsTo, designCapacity } from "../lib/orderDesigns.js";
 import ProductPreview from "../components/ProductPreview.jsx";
 import { setPendingContinuation } from "../lib/authReturn.js";
 import NumberInput from "../components/NumberInput.jsx";
@@ -216,6 +216,7 @@ export default function NewOrder({ workshopId }) {
               const line = group.variants[0];
               const product = productFor(line);
               const remaining = MAX_PRODUCT_UNITS - group.quantity;
+              const capacity = designCapacity(lines.length, group);
               return (
                 <div className="card pad" key={group.id}>
                   <div className="row wrap" style={{ gap: 14, alignItems: "flex-end" }}>
@@ -288,6 +289,25 @@ export default function NewOrder({ workshopId }) {
                     </button>
                   </div>
 
+                  <section className="design-split-tools" aria-label={t("design_section")}>
+                    <strong>{t("design_section")}</strong>
+                    <p className="small">{t("design_start_help")}</p>
+                    <div className="row wrap">
+                      <button className="btn secondary small" type="button"
+                        disabled={capacity <= group.variants.length}
+                        onClick={() => setLines(previous => splitDesign(previous, group.id, crypto.randomUUID()))}>
+                        {t("design_add")}
+                      </button>
+                      {capacity > group.variants.length + 1 && (
+                        <button className="btn secondary small" type="button"
+                          onClick={() => setLines(previous => splitDesignsTo(previous, group.id, capacity, () => crypto.randomUUID()))}>
+                          {t("design_split_all", { count: capacity })}
+                        </button>
+                      )}
+                    </div>
+                    {group.variants.length > 1 && <p className="small">{t("design_split_help")}</p>}
+                  </section>
+
                   <div className="stack" style={{ marginTop: 12 }}>
                     {group.variants.map((variant, index) => (
                       <div key={variant.localId}>
@@ -323,12 +343,7 @@ export default function NewOrder({ workshopId }) {
                       </div>
                     ))}
                   </div>
-                  <button className="btn secondary small" type="button" style={{ marginTop: 12 }}
-                    disabled={lines.length >= MAX_ORDER_LINES || !group.variants.some(variant => variant.quantity > 1)}
-                    onClick={() => setLines(previous => splitDesign(previous, group.id, crypto.randomUUID()))}>
-                    {t("design_add")}
-                  </button>
-                  <p className="small" style={{ marginTop: 8 }}>{t("design_split_help")}</p>
+
                 </div>
               );
             })}

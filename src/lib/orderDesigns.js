@@ -33,6 +33,21 @@ export function splitDesign(lines, groupId, newId) {
   ];
 }
 
+export function designCapacity(lineCount, group) {
+  return Math.min(group.quantity, group.variants.length + Math.max(0, MAX_ORDER_LINES - lineCount));
+}
+
+export function splitDesignsTo(lines, groupId, target, makeId) {
+  const group = orderGroups(lines).find(item => item.id === groupId);
+  if (!group || !Number.isInteger(target)) return lines;
+  const count = Math.min(target, designCapacity(lines.length, group));
+  let next = lines;
+  for (let index = group.variants.length; index < count; index++) {
+    next = splitDesign(next, groupId, makeId());
+  }
+  return next;
+}
+
 export function removeDesign(lines, groupId, variantId) {
   const group = orderGroups(lines).find(item => item.id === groupId);
   const removed = group?.variants.find(line => line.localId === variantId);

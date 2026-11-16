@@ -83,6 +83,7 @@ function ProfileForm({ workshop, t, onSaved }) {
         <label className="field">
           <span className="field-label">{t("ws_settings_payment_link")}</span>
           <input className="control" type="url" value={form.paymentLink} onChange={(e) => setForm({ ...form, paymentLink: e.target.value })} />
+          <span className="small">{t("ws_settings_payment_link_help")}</span>
         </label>
         <label className="check-row">
           <input type="checkbox" checked={form.pickup} onChange={(e) => setForm({ ...form, pickup: e.target.checked })} />

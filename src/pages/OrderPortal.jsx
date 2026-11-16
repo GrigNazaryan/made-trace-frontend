@@ -1,3 +1,4 @@
+import { orderPayment } from "../lib/orderPayment.js";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { useAuth } from "../lib/AuthContext.jsx";
@@ -203,6 +204,8 @@ export default function OrderPortal({ number }) {
     );
   }
 
+  const payment = orderPayment(order);
+
   return (
     <div className="page">
       <Link to="/my-orders" className="small">
@@ -220,6 +223,19 @@ export default function OrderPortal({ number }) {
       </div>
 
       <ProgressTracker order={order} t={t} />
+
+      {payment.message && <p className="notice order-payment" role="status">{t(payment.message)}</p>}
+      {payment.url && (
+        <section className="card pad order-payment">
+          <p className="small">
+            {order.paymentPercent >= 100 ? t("order_pay_full_note") : t("order_pay_partial_note", { percent: order.paymentPercent })}
+          </p>
+          <a className="btn primary" href={payment.url} target="_blank" rel="noopener noreferrer">
+            {t("order_pay")} →
+          </a>
+        </section>
+      )}
+
 
       <section className="card pad" style={{ marginTop: 18 }}>
         <h3>{t("order_lines_title")}</h3>
@@ -241,25 +257,11 @@ export default function OrderPortal({ number }) {
         {order.note && <p className="small" style={{ marginTop: 10 }}>{order.note}</p>}
       </section>
 
-      <div className="grid2" style={{ marginTop: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+      <div className="order-review-grid">
         <QuoteCard order={order} t={t} formatMoney={formatMoney} onDecision={onQuoteDecision} busy={busy} />
         <ProofCard order={order} t={t} onApprove={onProofApprove} onRevise={onProofRevise} busy={busy} />
       </div>
 
-      {order.paymentAvailableAtReady && (
-        <p className="notice" role="status" style={{ marginTop: 18 }}>{t("order_pay_at_ready")}</p>
-      )}
-
-      {order.workshop.paymentLink && (
-        <section className="card pad" style={{ marginTop: 18 }}>
-          <p className="small" style={{ marginBottom: 10 }}>
-            {order.paymentPercent >= 100 ? t("order_pay_full_note") : t("order_pay_partial_note", { percent: order.paymentPercent })}
-          </p>
-          <a className="btn primary" href={order.workshop.paymentLink} target="_blank" rel="noopener noreferrer">
-            {t("order_pay")} →
-          </a>
-        </section>
-      )}
 
       <div style={{ marginTop: 18 }}>
         <Messages order={order} t={t} formatDate={formatDate} onSend={onSendMessage} busy={busy} />

@@ -1,3 +1,4 @@
+import { useI18n } from "../lib/i18n/index.jsx";
 import { flushPendingContinuation } from "../lib/authReturn.js";
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 
@@ -64,11 +65,12 @@ export function matchRoute(pattern, path) {
 /** A consistent "← Back" affordance. Prefers real browser history so it retraces the
  * user's actual path; falls back to `fallback` when there's nothing to go back to
  * (e.g. the page was opened directly from a bookmark or a shared link). */
-export function BackButton({ fallback, label = "← Back", className = "back-link" }) {
+export function BackButton({ fallback, label, className = "back-link" }) {
+  const { t } = useI18n();
   const { goBack } = useRoute();
   return (
     <button type="button" className={className} onClick={() => goBack(fallback)}>
-      {label}
+      {label ?? t("common_back")}
     </button>
   );
 }

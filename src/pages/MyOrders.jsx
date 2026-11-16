@@ -1,3 +1,4 @@
+import { orderPayment } from "../lib/orderPayment.js";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { useAuth } from "../lib/AuthContext.jsx";
@@ -90,20 +91,32 @@ export default function MyOrders() {
             </div>
           ) : (
             <div className="stack">
-              {results.map((o) => (
-                <Link to={`/orders/${o.id}`} className="card activity-link" key={o.id}>
-                  <div className="between">
-                    <div>
-                      <strong>{o.title}</strong>
-                      <div className="small">
-                        {o.workshop.name} · {o.id}
+              {results.map((order) => {
+                const payment = orderPayment(order);
+                return (
+                  <article className="card my-order-card" key={order.id}>
+                    <Link to={`/orders/${order.id}`} className="activity-link">
+                      <div className="between">
+                        <div>
+                          <strong>{order.title}</strong>
+                          <div className="small">{order.workshop.name} · {order.id}</div>
+                        </div>
+                        <StatusChip status={order.status} t={t} />
                       </div>
-                    </div>
-                    <StatusChip status={o.status} t={t} />
-                  </div>
-                  <span className="small">{formatDate(o.updatedAt)}</span>
-                </Link>
-              ))}
+                      <span className="small">{formatDate(order.updatedAt)}</span>
+                    </Link>
+                    {(payment.url || payment.message) && (
+                      <div className="my-order-payment">
+                        {payment.url
+                          ? <a className="btn primary small" href={payment.url} target="_blank" rel="noopener noreferrer">
+                              {t("order_pay")} →
+                            </a>
+                          : <p className="small">{t(payment.message)}</p>}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           )}
         </>

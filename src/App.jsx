@@ -40,11 +40,11 @@ const NAV_LINKS = [
 ];
 
 function LanguagePicker() {
-  const { language, setLanguage } = useI18n();
+  const { language, setLanguage, t } = useI18n();
   return (
     <select
       className="control small"
-      aria-label="Language"
+      aria-label={t("nav_language")}
       value={language}
       onChange={(e) => setLanguage(e.target.value)}
       style={{ width: "auto" }}

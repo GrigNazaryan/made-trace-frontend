@@ -1,13 +1,14 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import en from "./en.js";
 import ru from "./ru.js";
 import hy from "./hy.js";
 import de from "./de.js";
 import fr from "./fr.js";
 import extras from "./security.js";
+import orderUI from "./order-ui.js";
 
 export const dictionaries = { en, ru, hy, de, fr };
-for (const [language, words] of Object.entries(extras)) Object.assign(dictionaries[language], words);
+for (const [language, words] of Object.entries(extras)) Object.assign(dictionaries[language], words, orderUI[language]);
 export const languageNames = { en: "English", ru: "Русский", hy: "Հայերեն", de: "Deutsch", fr: "Français" };
 export const localeCodes = { en: "en-US", ru: "ru-RU", hy: "hy-AM", de: "de-DE", fr: "fr-FR" };
 
@@ -25,18 +26,24 @@ const I18nContext = createContext(null);
 const AUTO_DETECT_LANGUAGES = ["ru", "hy", "en"];
 
 function detectDefault() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored && dictionaries[stored]) return stored;
-  const nav = (navigator.language || "en").slice(0, 2);
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && Object.hasOwn(dictionaries, stored)) return stored;
+  } catch { /* Use the device locale if browser storage is unavailable. */ }
+  const nav = (navigator.language || "en").slice(0, 2).toLowerCase();
   return AUTO_DETECT_LANGUAGES.includes(nav) ? nav : "en";
 }
 
 export function I18nProvider({ children }) {
   const [language, setLanguageState] = useState(detectDefault);
 
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
   const setLanguage = useCallback((value) => {
-    const next = dictionaries[value] ? value : "en";
-    localStorage.setItem(STORAGE_KEY, next);
+    const next = Object.hasOwn(dictionaries, value) ? value : "en";
+    try { localStorage.setItem(STORAGE_KEY, next); } catch { /* Language still changes in this tab. */ }
     setLanguageState(next);
   }, []);
 

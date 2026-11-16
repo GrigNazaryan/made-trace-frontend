@@ -78,35 +78,35 @@ export default function DesignEditor({ product, color, value, onChange, folder =
       <div className="editor-toolbar">
         <div className="segmented">
           <button className={side === "front" ? "active" : ""} onClick={() => changeSide("front")} type="button">
-            Front
+            {t("editor_front")}
           </button>
           <button className={side === "back" ? "active" : ""} onClick={() => changeSide("back")} type="button">
-            Back
+            {t("editor_back")}
           </button>
         </div>
         <div className="editor-action-wrap">
           <button className="btn secondary small" type="button" onClick={() => { editor?.undo(); forceRender((n) => n + 1); }} disabled={!editor?.canUndo()}>
-            ↶ Undo
+            {t("editor_undo")}
           </button>
           <button className="btn secondary small" type="button" onClick={() => { editor?.redo(); forceRender((n) => n + 1); }} disabled={!editor?.canRedo()}>
-            ↷ Redo
+            {t("editor_redo")}
           </button>
           <button className="btn secondary small" type="button" onClick={() => editor?.setZoom(1)}>
-            Fit
+            {t("editor_fit")}
           </button>
         </div>
       </div>
 
       <div className="builder">
         <aside className="card editor-panel">
-          <span className="eyebrow">ADD ELEMENTS</span>
-          <h3 style={{ marginTop: 11 }}>Create your design</h3>
+          <span className="eyebrow">{t("editor_elements")}</span>
+          <h3 style={{ marginTop: 11 }}>{t("editor_title")}</h3>
           <div className="stack">
             <button className="btn secondary block" type="button" onClick={() => editor?.addText()}>
-              ＋ Add text
+              {t("editor_add_text")}
             </button>
             <button className="btn secondary block" type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-              {uploading ? t("common_loading") : "⇪ Upload image"}
+              {uploading ? t("common_loading") : t("editor_upload")}
             </button>
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onPickFile} />
           </div>
@@ -116,26 +116,25 @@ export default function DesignEditor({ product, color, value, onChange, folder =
             </p>
           )}
           <p className="instruction" style={{ marginTop: 16 }}>
-            Drag to move. Use the corner handle to resize and the top handle to rotate. Keep artwork within the
-            print guides.
+            {t("editor_instruction")}
           </p>
         </aside>
 
         <section className="card pad editor-canvas-shell">
-          <canvas ref={canvasRef} aria-label="Design canvas" />
+          <canvas ref={canvasRef} aria-label={t("editor_canvas")} />
         </section>
 
         <aside className="card editor-panel">
-          <span className="eyebrow">SELECTED ELEMENT</span>
+          <span className="eyebrow">{t("editor_selected")}</span>
           {!selected && (
             <p className="small" style={{ marginTop: 11 }}>
-              Select an element on the canvas to edit it.
+              {t("editor_select")}
             </p>
           )}
           {selected?.type === "text" && (
             <div className="stack" style={{ marginTop: 11 }}>
               <label className="field">
-                <span className="field-label">Text</span>
+                <span className="field-label">{t("editor_text")}</span>
                 <input
                   className="control"
                   maxLength={80}
@@ -144,7 +143,7 @@ export default function DesignEditor({ product, color, value, onChange, folder =
                 />
               </label>
               <label className="field">
-                <span className="field-label">Font</span>
+                <span className="field-label">{t("editor_font")}</span>
                 <select className="control" value={selected.font} onChange={(e) => patch({ font: e.target.value })}>
                   {designFonts.map(([name, stack]) => (
                     <option key={name} value={name} style={{ fontFamily: stack }}>
@@ -154,7 +153,7 @@ export default function DesignEditor({ product, color, value, onChange, folder =
                 </select>
               </label>
               <label className="field">
-                <span className="field-label">Size</span>
+                <span className="field-label">{t("editor_size")}</span>
                 <input
                   className="control"
                   type="range"
@@ -165,7 +164,7 @@ export default function DesignEditor({ product, color, value, onChange, folder =
                 />
               </label>
               <label className="field">
-                <span className="field-label">Color</span>
+                <span className="field-label">{t("editor_color")}</span>
                 <input
                   className="control"
                   type="color"
@@ -183,14 +182,14 @@ export default function DesignEditor({ product, color, value, onChange, folder =
                 style={{ width: "100%", borderRadius: 10, border: "1px solid #e5e9f0" }}
               />
               <button className="btn secondary small block" type="button" onClick={() => fileInputRef.current?.click()}>
-                Replace image
+                {t("editor_replace")}
               </button>
             </div>
           )}
           {selected && (
             <div className="stack" style={{ marginTop: 16 }}>
               <label className="field">
-                <span className="field-label">Rotation</span>
+                <span className="field-label">{t("editor_rotation")}</span>
                 <input
                   className="control"
                   type="range"
@@ -203,7 +202,7 @@ export default function DesignEditor({ product, color, value, onChange, folder =
               </label>
               <div className="row wrap">
                 <button className="btn secondary small" type="button" onClick={() => editor?.duplicate()}>
-                  Duplicate
+                  {t("editor_duplicate")}
                 </button>
                 <button className="btn danger small" type="button" onClick={() => editor?.remove()}>
                   {t("common_delete")}

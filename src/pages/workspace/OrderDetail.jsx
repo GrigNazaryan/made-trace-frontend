@@ -118,7 +118,7 @@ function ProofSection({ order, t, onSent }) {
                 type="button"
                 onClick={() => setEditingId(editingId === line.id ? null : line.id)}
               >
-                {editingId === line.id ? t("common_close") : "Edit artwork"}
+                {editingId === line.id ? t("common_close") : t("editor_edit_artwork")}
               </button>
             </div>
             {editingId === line.id && (
