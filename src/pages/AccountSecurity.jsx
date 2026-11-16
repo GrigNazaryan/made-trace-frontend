@@ -7,17 +7,36 @@ import { destinationAfterAuth } from "../lib/authReturn.js";
 
 export function GoogleButton({ disabled = false }) {
   const { t } = useI18n();
+  const { user } = useAuth();
   const [options, setOptions] = useState(null);
+  const [linkError, setLinkError] = useState("");
   useEffect(() => { api.authOptions().then(setOptions).catch(()=>setOptions({})); }, []);
   return <div style={{marginTop:16}}><button className="btn secondary block" type="button"
-    disabled={disabled || !options?.google} onClick={() => {
+    disabled={disabled || !options?.google} onClick={async () => {
       // A real top-level navigation, not fetch(): the CSRF state cookie the
       // backend sets on this request only survives the round trip through
       // Google if it's written during an actual top-level visit to its domain
       // — see the comment on google_start() in accounts.py for why.
-      window.location.assign(`${BASE_URL}/api/auth/google/start`);
+      //
+      // When already logged in (linking an account from Security settings),
+      // the backend can't recognize that via a cookie on this navigation — a
+      // cookie set earlier through fetch() lives in a different storage
+      // partition than one read during a direct top-level visit on some
+      // browsers. So fetch a one-time link token first, with the in-memory
+      // Bearer token (not cookie-based, so it isn't affected), and carry
+      // identity across that way instead.
+      if (user) {
+        setLinkError("");
+        try {
+          const { token } = await api.googleLinkToken();
+          window.location.assign(`${BASE_URL}/api/auth/google/start?link=${encodeURIComponent(token)}`);
+        } catch (err) { setLinkError(errorText(t, err.code)); }
+      } else {
+        window.location.assign(`${BASE_URL}/api/auth/google/start`);
+      }
     }}>{t("account_google")}</button>
-    {disabled ? <p className="small">{t("account_google_company")}</p> : options && !options.google && <p className="small">{t("account_google_setup")}</p>}</div>;
+    {disabled ? <p className="small">{t("account_google_company")}</p> : options && !options.google && <p className="small">{t("account_google_setup")}</p>}
+    {linkError && <p className="notice" role="alert">{linkError}</p>}</div>;
 }
 
 export function OAuthReturn() {

@@ -183,6 +183,7 @@ export const api = {
   // --- billing --------------------------------------------------------------
   // --- uploads (private bucket; see backend/app/storage.py) -----------------
   signUpload: (body) => post("/api/uploads/sign", body),
+  googleLinkToken: () => post("/api/auth/google/link-token"),
 
   billingInfo: () => get("/api/billing/info"),
   listPayments: () => get("/api/billing/payments"),
