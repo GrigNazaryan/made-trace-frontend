@@ -2,6 +2,13 @@
 // Values can be a plain string, or an object keyed by CLDR plural category
 // ({one, few, many, other}) selected through Intl.PluralRules — see lib/i18n/index.jsx `t()`.
 export default {
+  "design_variant": "Design {index}",
+  "design_group_total": "Total units: {count}",
+  "design_add": "Add another design",
+  "design_remove": "Remove design",
+  "design_split_help": "Each new design takes one unit from the largest allocation. Setup fees and quantity discounts apply per design.",
+  "order_pay_at_ready": "The workshop’s payment link will appear when this order is ready.",
+  "err_invalid:design_group": "Check the quantities for each design.",
   // --- nav / shell ---------------------------------------------------------
   nav_directory: "Workshops",
   nav_how: "How it works",

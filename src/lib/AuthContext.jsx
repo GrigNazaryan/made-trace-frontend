@@ -4,78 +4,89 @@ import { api, getToken, setToken, setImpersonating } from "./api.js";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null), 
-        [loading, setLoading] = useState(true), 
-        [connectionError, setConnectionError] = useState(false), 
+  const [user, setUser] = useState(null),
+        [loading, setLoading] = useState(true),
+        [connectionError, setConnectionError] = useState(false),
         [isReadOnlyImpersonation, setReadOnly] = useState(false);
-  
-  const backup = useRef(null);
 
-  const accept = useCallback(data => { 
-    setToken(data.accessToken); 
-    setUser(data.user); 
-    setConnectionError(false); 
-    return data.user; 
+  const backup = useRef(null);
+  const revision = useRef(0);
+
+  const accept = useCallback(data => {
+    revision.current++;
+    setLoading(false);
+    setToken(data.accessToken);
+    setUser(data.user);
+    setConnectionError(false);
+    return data.user;
   }, []);
 
-  const loginWithGoogle = useCallback(async (googleToken) => {
-    const data = await api.googleLogin({ token: googleToken });
-    return accept(data);
-  }, [accept]);
-
   const refresh = useCallback(async () => {
-    try { return accept(getToken() ? { accessToken: getToken(), user: await api.me() } : await api.restoreSession()); }
-    catch (error) { if (error.status === 401) { setToken(""); setUser(null); } else setConnectionError(true); return null; }
-    finally { setLoading(false); }
+    const attempt = revision.current;
+    try {
+      const user = getToken() ? await api.me() : null;
+      const data = user ? { accessToken: getToken(), user } : await api.restoreSession();
+      if (attempt === revision.current) return accept(data);
+    } catch (error) {
+      if (attempt !== revision.current) return null;
+      if (error.status === 401) {
+        setToken("");
+        setUser(null);
+        setConnectionError(false);
+      } else setConnectionError(true);
+    } finally {
+      if (attempt === revision.current) setLoading(false);
+    }
+    return null;
   }, [accept]);
 
   useEffect(() => { refresh(); }, [refresh]);
-  
-  useEffect(() => { 
-    const ended = () => { setUser(null); backup.current = null; setImpersonating(false); }; 
-    window.addEventListener("madetrace:session-ended", ended); 
-    return () => window.removeEventListener("madetrace:session-ended", ended); 
+
+  useEffect(() => {
+    const ended = () => { revision.current++; setLoading(false); setUser(null); backup.current = null; setImpersonating(false); };
+    window.addEventListener("madetrace:session-ended", ended);
+    return () => window.removeEventListener("madetrace:session-ended", ended);
   }, []);
 
   const login = useCallback(async (email, password) => accept(await api.login({ email, password })), [accept]);
   const adminLogin = useCallback(async (email, password) => accept(await api.adminLogin({ email, password })), [accept]);
   const register = useCallback(async body => accept(await api.register(body)), [accept]);
-  
-  const logout = useCallback(async () => { 
-    try { await api.logout(); } catch { setConnectionError(true); return false; } 
-    backup.current = null; setReadOnly(false); setImpersonating(false); setToken(""); setUser(null); return true; 
-  }, []);
 
-  const impersonateAs = useCallback(async (token, readOnly) => { 
-    backup.current = { token: getToken(), user }; 
-    setImpersonating(true); 
-    setReadOnly(readOnly); 
-    setToken(token); 
-    await refresh(); 
+  const logout = useCallback(async () => {
+    try { await api.logout(); } catch { setConnectionError(true); return false; }
+    backup.current = null; setReadOnly(false); setImpersonating(false); accept({ accessToken: "", user: null }); return true;
+  }, [accept]);
+
+  const impersonateAs = useCallback(async (token, readOnly) => {
+    backup.current = { token: getToken(), user };
+    setImpersonating(true);
+    setReadOnly(readOnly);
+    setToken(token);
+    await refresh();
   }, [user, refresh]);
 
-  const stopImpersonating = useCallback(async () => { 
-    if (!backup.current) return; 
-    setImpersonating(false); 
-    setReadOnly(false); 
-    accept({ accessToken: backup.current.token, user: backup.current.user }); 
-    backup.current = null; 
-    await refresh(); 
+  const stopImpersonating = useCallback(async () => {
+    if (!backup.current) return;
+    setImpersonating(false);
+    setReadOnly(false);
+    accept({ accessToken: backup.current.token, user: backup.current.user });
+    backup.current = null;
+    await refresh();
   }, [accept, refresh]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, loading, connectionError, refresh, login, adminLogin, register, logout, 
-      accept, setUser, impersonateAs, stopImpersonating, loginWithGoogle, 
-      isImpersonated: !!user?.isImpersonated, isReadOnlyImpersonation, canStopImpersonating: !!backup.current 
+    <AuthContext.Provider value={{
+      user, loading, connectionError, refresh, login, adminLogin, register, logout,
+      accept, setUser, impersonateAs, stopImpersonating,
+      isImpersonated: !!user?.isImpersonated, isReadOnlyImpersonation, canStopImpersonating: !!backup.current
     }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() { 
-  const context = useContext(AuthContext); 
-  if (!context) throw Error("useAuth must be inside AuthProvider"); 
-  return context; 
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw Error("useAuth must be inside AuthProvider");
+  return context;
 }

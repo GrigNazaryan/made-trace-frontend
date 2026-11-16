@@ -110,7 +110,7 @@ function ProofSection({ order, t, onSent }) {
           <div key={line.id}>
             <div className="line-card">
               <div className="grow">
-                <strong style={{ fontSize: 12 }}>{line.name}</strong>
+                <strong style={{ fontSize: 12 }}>{line.name}{line.designNumber && ` · ${t("design_variant", { index: line.designNumber })}`}</strong>
                 <div className="small">{line.color} · {line.size} · ×{line.quantity}</div>
               </div>
               <button
@@ -359,7 +359,7 @@ export default function OrderDetail({ number }) {
                 <div className="stack" style={{ marginTop: 10 }}>
                   {order.lines.map((l) => (
                     <div key={l.id} className="row between">
-                      <span>{l.name} · {l.color} · {l.size}</span>
+                      <span>{l.name}{l.designNumber && ` · ${t("design_variant", { index: l.designNumber })}`} · {l.color} · {l.size}</span>
                       <span className="small">× {l.quantity}</span>
                     </div>
                   ))}

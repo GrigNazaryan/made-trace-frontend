@@ -1,5 +1,12 @@
 // French. Falls back to en.js for any key not yet translated here.
 export default {
+  "design_variant": "Design {index}",
+  "design_group_total": "Total : {count} pièces",
+  "design_add": "Ajouter un design",
+  "design_remove": "Retirer le design",
+  "design_split_help": "Chaque nouveau design prend une pièce du lot le plus important. Les frais de préparation et les remises de volume s’appliquent par design.",
+  "order_pay_at_ready": "Le lien de paiement apparaîtra quand la commande sera prête.",
+  "err_invalid:design_group": "Vérifiez la quantité de chaque design.",
   // --- nav / shell ---------------------------------------------------------
   nav_directory: "Ateliers",
   nav_how: "Comment ça marche",

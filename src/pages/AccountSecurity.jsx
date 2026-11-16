@@ -5,50 +5,92 @@ import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { Link, useRoute, BackButton } from "../router/HashRouter.jsx";
 import { destinationAfterAuth } from "../lib/authReturn.js";
 
+const GOOGLE_VERIFIER_KEY = "madetrace_google_verifier";
+let exchangeInFlight;
+
+function googleExchange(code) {
+  if (exchangeInFlight?.code === code) return exchangeInFlight.promise;
+  const verifier = sessionStorage.getItem(GOOGLE_VERIFIER_KEY);
+  if (!code || !verifier) return Promise.reject(new Error("Missing Google sign-in context"));
+  const promise = api.googleExchange({ code, verifier }).then(data => {
+    if (sessionStorage.getItem(GOOGLE_VERIFIER_KEY) === verifier) {
+      sessionStorage.removeItem(GOOGLE_VERIFIER_KEY);
+    }
+    return data;
+  });
+  exchangeInFlight = { code, promise };
+  return promise;
+}
+
 export function GoogleButton({ disabled = false }) {
   const { t } = useI18n();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [options, setOptions] = useState(null);
   const [linkError, setLinkError] = useState("");
-  useEffect(() => { api.authOptions().then(setOptions).catch(()=>setOptions({})); }, []);
-  return <div style={{marginTop:16}}><button className="btn secondary block" type="button"
-    disabled={disabled || !options?.google} onClick={async () => {
-      // A real top-level navigation, not fetch(): the CSRF state cookie the
-      // backend sets on this request only survives the round trip through
-      // Google if it's written during an actual top-level visit to its domain
-      // — see the comment on google_start() in accounts.py for why.
-      //
-      // When already logged in (linking an account from Security settings),
-      // the backend can't recognize that via a cookie on this navigation — a
-      // cookie set earlier through fetch() lives in a different storage
-      // partition than one read during a direct top-level visit on some
-      // browsers. So fetch a one-time link token first, with the in-memory
-      // Bearer token (not cookie-based, so it isn't affected), and carry
-      // identity across that way instead.
-      if (user) {
-        setLinkError("");
-        try {
-          const { token } = await api.googleLinkToken();
-          window.location.assign(`${BASE_URL}/api/auth/google/start?link=${encodeURIComponent(token)}`);
-        } catch (err) { setLinkError(errorText(t, err.code)); }
-      } else {
-        window.location.assign(`${BASE_URL}/api/auth/google/start`);
-      }
-    }}>{t("account_google")}</button>
-    {disabled ? <p className="small">{t("account_google_company")}</p> : options && !options.google && <p className="small">{t("account_google_setup")}</p>}
-    {linkError && <p className="notice" role="alert">{linkError}</p>}</div>;
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { api.authOptions().then(setOptions).catch(() => setOptions({})); }, []);
+  if (!options?.google) return null;
+
+  async function start() {
+    setBusy(true);
+    setLinkError("");
+    try {
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      const hex = array => Array.from(array, value => value.toString(16).padStart(2, "0")).join("");
+      const verifier = hex(bytes);
+      const challenge = hex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
+      const query = new URLSearchParams({ challenge });
+      if (user) query.set("link", (await api.googleLinkToken()).token);
+      sessionStorage.setItem(GOOGLE_VERIFIER_KEY, verifier);
+      window.location.assign(BASE_URL + "/api/auth/google/start?" + query);
+    } catch (error) {
+      setLinkError(errorText(t, error.code));
+      setBusy(false);
+    }
+  }
+
+  return <div style={{ marginTop: 16 }}>
+    <button className="btn secondary block" type="button" disabled={disabled || busy || loading} onClick={start}>
+      {t("account_google")}
+    </button>
+    {disabled && <p className="small">{t("account_google_company")}</p>}
+    {linkError && <p className="notice" role="alert">{linkError}</p>}
+  </div>;
 }
 
 export function OAuthReturn() {
-  const { accept } = useAuth(), { navigate } = useRoute(), { t } = useI18n();
-  const [error,setError] = useState("");
-  useEffect(()=>{let cancelled=false;const result=new URLSearchParams(location.hash.split("?")[1]).get("result");
-    if(result!=="ok"){setError(t(result==="link-required"?"account_google_link":"account_google_failed"));return;}
-    api.restoreSession().then(async data=>{if(!cancelled){accept(data);navigate(await destinationAfterAuth(data.user.role),{replace:true});}})
-      .catch(()=>!cancelled&&setError(t("account_google_failed")));
-    return()=>{cancelled=true;};
-  },[]);
-  return <div className="page narrow"><p role="status">{error||t("common_loading")}</p>{error&&<Link to="/login">{t("nav_login")}</Link>}</div>;
+  const { accept, user } = useAuth();
+  const { navigate } = useRoute();
+  const { t } = useI18n();
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams(location.hash.split("?")[1]);
+    const result = params.get("result");
+    if (result !== "ok") {
+      sessionStorage.removeItem(GOOGLE_VERIFIER_KEY);
+      setError(result === "link-required" ? "account_google_link" : "account_google_failed");
+      return;
+    }
+    let exchanging;
+    try { exchanging = googleExchange(params.get("code")); }
+    catch (error) { exchanging = Promise.reject(error); }
+    exchanging.then(async data => {
+      if (cancelled) return;
+      accept(data);
+      const fallback = data.user.role === "company_owner" ? "/workspace/overview" : "/my-orders";
+      const destination = data.linked ? "/account/security" : await destinationAfterAuth(data.user.role).catch(() => fallback);
+      if (!cancelled && location.hash.startsWith("#/oauth-return")) {
+        navigate(destination, { replace: true });
+      }
+    }).catch(() => { if (!cancelled) setError("account_google_failed"); });
+    return () => { cancelled = true; };
+  }, [accept, navigate]);
+
+  return <div className="page narrow">
+    <p role="status">{t(error || "common_loading")}</p>
+    {error && <Link to={user ? "/account/security" : "/login"}>{t(user ? "account_security" : "nav_login")}</Link>}
+  </div>;
 }
 
 export function PasswordRecovery({ reset = false }) {

@@ -1,3 +1,4 @@
+import ProductPreview from "../../components/ProductPreview.jsx";
 import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
@@ -292,6 +293,7 @@ function BulkPricing({ t, products }) {
 
 export default function Products() {
   const { t } = useI18n();
+  const [previewColors, setPreviewColors] = useState({});
   const [products, setProducts] = useState(null);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null); // null = none, "new" = creating
@@ -365,6 +367,7 @@ export default function Products() {
             <div className="products-grid">
               {products.map((p) => (
                 <div className="card product-card" key={p.id}>
+                  <ProductPreview product={p} color={previewColors[p.id] || p.colors[0]} />
                   <span className="eyebrow">{p.category}</span>
                   <h3>{p.name}</h3>
                   <p className="small">
@@ -372,7 +375,11 @@ export default function Products() {
                   </p>
                   <div className="row wrap">
                     {p.colors.map((c) => (
-                      <span key={c} className="color-dot" style={{ background: c }} />
+                      <button key={c} type="button" className="color-dot"
+                      aria-label={p.name + " · " + c}
+                      aria-pressed={(previewColors[p.id] || p.colors[0]) === c}
+                      style={{ background: c }}
+                      onClick={() => setPreviewColors(previous => ({ ...previous, [p.id]: c }))} />
                     ))}
                   </div>
                   <div className="row wrap card-actions">

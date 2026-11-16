@@ -1,5 +1,12 @@
 // German. Falls back to en.js for any key not yet translated here.
 export default {
+  "design_variant": "Design {index}",
+  "design_group_total": "Stück gesamt: {count}",
+  "design_add": "Weiteres Design hinzufügen",
+  "design_remove": "Design entfernen",
+  "design_split_help": "Ein neues Design übernimmt ein Stück aus der größten Gruppe. Einrichtung und Mengenrabatte gelten je Design.",
+  "order_pay_at_ready": "Der Zahlungslink erscheint, sobald die Bestellung fertig ist.",
+  "err_invalid:design_group": "Prüfen Sie die Stückzahl pro Design.",
   // --- nav / shell ---------------------------------------------------------
   nav_directory: "Werkstätten",
   nav_how: "So funktioniert's",

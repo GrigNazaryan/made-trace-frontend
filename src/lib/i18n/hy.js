@@ -1,6 +1,13 @@
 // Draft Armenian translation. The handoff notes these need a native-speaker review
 // before launch — the English/Russian keys are the source of truth until then.
 export default {
+  "design_variant": "Դիզայն {index}",
+  "design_group_total": "Ընդամենը՝ {count} հատ",
+  "design_add": "Ավելացնել դիզայն",
+  "design_remove": "Հեռացնել դիզայնը",
+  "design_split_help": "Նոր դիզայնին փոխանցվում է մեկ հատ ամենամեծ խմբից։ Նախապատրաստման վճարն ու զեղչը հաշվվում են յուրաքանչյուր դիզայնի համար։",
+  "order_pay_at_ready": "Վճարման հղումը կհայտնվի, երբ պատվերը պատրաստ լինի։",
+  "err_invalid:design_group": "Ստուգեք յուրաքանչյուր դիզայնի քանակը։",
   nav_directory: "Արհեստանոցներ",
   nav_how: "Ինչպես է աշխատում",
   nav_for_business: "Արհեստանոցների համար",

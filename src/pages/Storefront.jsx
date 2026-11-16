@@ -1,3 +1,4 @@
+import ProductPreview from "../components/ProductPreview.jsx";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { Link } from "../router/HashRouter.jsx";
@@ -111,6 +112,7 @@ export default function Storefront({ id }) {
           <div className="products-grid">
             {products.map((p) => (
               <Link to={`/order/${workshop.id}`} className="card product-card" key={p.id}>
+                <ProductPreview product={p} color={p.colors?.[0]} />
                 <span className="eyebrow">{p.category}</span>
                 <h3>{p.name}</h3>
                 {p.description && <p className="small">{p.description}</p>}

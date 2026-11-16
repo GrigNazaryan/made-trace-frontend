@@ -227,7 +227,7 @@ export default function OrderPortal({ number }) {
           {order.lines.map((line) => (
             <div key={line.id} className="row between">
               <span>
-                {line.name} · {line.color} · {line.size}
+                {line.name}{line.designNumber && ` · ${t("design_variant", { index: line.designNumber })}`} · {line.color} · {line.size}
               </span>
               <span className="small">× {line.quantity}</span>
             </div>
@@ -245,6 +245,10 @@ export default function OrderPortal({ number }) {
         <QuoteCard order={order} t={t} formatMoney={formatMoney} onDecision={onQuoteDecision} busy={busy} />
         <ProofCard order={order} t={t} onApprove={onProofApprove} onRevise={onProofRevise} busy={busy} />
       </div>
+
+      {order.paymentAvailableAtReady && (
+        <p className="notice" role="status" style={{ marginTop: 18 }}>{t("order_pay_at_ready")}</p>
+      )}
 
       {order.workshop.paymentLink && (
         <section className="card pad" style={{ marginTop: 18 }}>

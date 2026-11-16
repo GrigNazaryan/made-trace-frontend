@@ -15,18 +15,28 @@ export class ApiError extends Error {
 let memoryToken = "";
 let memoryIdentity = "";
 let refreshInFlight = null;
+let sessionRevision = 0;
 let impersonating = false;
 export function getToken() { return memoryToken; }
 export function setToken(token) {
+  if (token === memoryToken) return;
+  sessionRevision++;
   memoryToken = token || ""; memoryIdentity = "";
   try { memoryIdentity = JSON.parse(atob(memoryToken.split(".")[1].replaceAll("-", "+").replaceAll("_", "/"))).sub || ""; } catch { }
   localStorage.removeItem(TOKEN_KEY);
 }
 export function setImpersonating(value) { impersonating = value; }
 export async function restoreSession() {
-  if (!refreshInFlight) refreshInFlight = request("POST", "/api/auth/refresh", { body: {} })
-    .then(data => { setToken(data.accessToken); return data; })
-    .finally(() => { refreshInFlight = null; });
+  if (!refreshInFlight) {
+    const revision = sessionRevision;
+    refreshInFlight = request("POST", "/api/auth/refresh", { body: {} })
+      .then(data => {
+        if (revision !== sessionRevision) throw new ApiError("session_changed", 409);
+        setToken(data.accessToken);
+        return data;
+      })
+      .finally(() => { refreshInFlight = null; });
+  }
   return refreshInFlight;
 }
 
@@ -41,8 +51,10 @@ async function request(method, path, { body, params, retried = false } = {}) {
       if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, value);
     }
   }
+  const revision = sessionRevision;
   const headers = { Accept: "application/json" };
   const token = getToken();
+  const identity = memoryIdentity;
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -68,8 +80,9 @@ async function request(method, path, { body, params, retried = false } = {}) {
 
   if (!response.ok) {
     const code = (data && (data.detail?.code || data.detail)) || `http_${response.status}`;
-    if (response.status === 401 && !["/api/auth/login", "/api/auth/admin-login", "/api/auth/register", "/api/auth/refresh", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password"].includes(path) && !retried && !impersonating) {
-      const expectedIdentity = memoryIdentity;
+    if (response.status === 401 && !["/api/auth/login", "/api/auth/admin-login", "/api/auth/register", "/api/auth/refresh", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/google/exchange"].includes(path) && !retried && !impersonating) {
+      if (revision !== sessionRevision && (!identity || memoryIdentity !== identity)) throw new ApiError("session_changed", 409);
+      const expectedIdentity = identity;
       try {
         const session = await restoreSession();
         if (expectedIdentity && session.user?.id !== expectedIdentity) throw new ApiError("account_changed", 401);
@@ -114,19 +127,23 @@ const get = (path, params) => request("GET", path, { params });
 const post = (path, body) => request("POST", path, { body: body ?? {} });
 const put = (path, body) => request("PUT", path, { body: body ?? {} });
 const del = (path) => request("DELETE", path);
+async function postSession(path, body) {
+  if (refreshInFlight) await refreshInFlight.catch(() => {});
+  return post(path, body);
+}
 
 export const api = {
   // --- auth -------------------------------------------------------------
-  register: (body) => post("/api/auth/register", body),
-  login: (body) => post("/api/auth/login", body),
-  adminLogin: (body) => post("/api/auth/admin-login", body),
+  register: (body) => postSession("/api/auth/register", body),
+  login: (body) => postSession("/api/auth/login", body),
+  adminLogin: (body) => postSession("/api/auth/admin-login", body),
   me: () => get("/api/auth/me"),
   changePassword: (body) => post("/api/auth/change-password", body),
   bootstrapAdmin: (body) => post("/api/auth/bootstrap-admin", body),
-  googleLogin: (body) => post("/api/auth/google", body), // <--- Используем стандартный post вместо fetch вручную
+  googleExchange: (body) => postSession("/api/auth/google/exchange", body),
   restoreSession,
   authOptions: () => get("/api/auth/options"),
-  logout: () => post("/api/auth/logout"),
+  logout: () => postSession("/api/auth/logout"),
   revokeOthers: (body) => post("/api/auth/logout-others", body),
   forgotPassword: (body) => post("/api/auth/forgot-password", body),
   resetPassword: (body) => post("/api/auth/reset-password", body),

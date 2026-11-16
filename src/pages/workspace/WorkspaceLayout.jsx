@@ -23,11 +23,11 @@ export default function WorkspaceLayout({ section, children }) {
 
   useEffect(() => {
     if (loading || connectionError) return;
-    if (!user || (user.role !== "company_owner" && user.role !== "admin")) navigate("/login");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, user]);
+    if (!user) navigate("/login", { replace: true });
+    else if (user.role === "customer") navigate("/my-orders", { replace: true });
+  }, [loading, connectionError, user, navigate]);
 
-  if (loading || connectionError || !user || !["company_owner", "admin"].includes(user.role)) return null;
+  if (loading || !user || !["company_owner", "admin"].includes(user.role)) return null;
 
   return (
     <div className="workspace">

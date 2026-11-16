@@ -14,18 +14,25 @@ export function HashRouterProvider({ children }) {
   useEffect(() => {
     const onHashChange = () => setPath(currentPath());
     window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    window.addEventListener("popstate", onHashChange);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("popstate", onHashChange);
+    };
   }, []);
 
   const navigate = useCallback((to, { replace = false } = {}) => {
     if (!to.startsWith("/") || to.startsWith("//")) return;
     // Daily workspace tabs share one browser-history entry.
     const internal = /^\/(workspace|admin)(\/|$)/;
-    if (replace || internal.test(currentPath()) && internal.test(to)) {
-      window.history.replaceState(null, "", "#" + to);
-      setPath(to.split("?")[0]);
-    } else if (currentPath() !== to) window.location.hash = to;
-    else setPath(to.split("?")[0]);
+    const from = currentPath();
+    const next = "#" + to;
+    if (window.location.hash !== next) {
+      const method = replace || from === "/oauth-return" || (internal.test(from) && internal.test(to))
+        ? "replaceState" : "pushState";
+      window.history[method](null, "", next);
+    }
+    setPath(currentPath());
   }, []);
 
   // Product back means a semantic parent/exit, never ten previous tab selections.

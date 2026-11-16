@@ -1,9 +1,17 @@
+import { useAuth } from "../lib/AuthContext.jsx";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { Link, BackButton } from "../router/HashRouter.jsx";
 import { api } from "../lib/api.js";
 
 export default function Pricing() {
+  const { user, loading, connectionError } = useAuth();
+  const destination = user?.role === "company_owner"
+    ? "/workspace/billing"
+    : user?.role === "admin" ? "/admin/workshops" : user ? "/my-orders" : "/register";
+  const destinationLabel = user?.role === "company_owner"
+    ? "ws_nav_billing"
+    : user?.role === "admin" ? "nav_admin" : user ? "nav_my_orders" : null;
   const { t, formatMoney } = useI18n();
   const [plans, setPlans] = useState(null);
   const [currency, setCurrency] = useState("USD");
@@ -40,7 +48,7 @@ export default function Pricing() {
               <p>{t("pricing_core_body")}</p>
             </div>
             <div className="plan-card-action">
-              <Link to="/register" className="btn secondary block">{t("pricing_cta")}</Link>
+              <Link to={destination} aria-disabled={loading || connectionError} onClick={event => { if (loading || connectionError) event.preventDefault(); }} className="btn secondary block">{t(destinationLabel || "pricing_cta")}</Link>
             </div>
           </div>
           <div className="card plan-card growth-plan">
@@ -50,7 +58,7 @@ export default function Pricing() {
               <p>{t("pricing_growth_body")}</p>
             </div>
             <div className="plan-card-action">
-              <Link to="/register" className="btn primary block">{t("pricing_cta")}</Link>
+              <Link to={destination} aria-disabled={loading || connectionError} onClick={event => { if (loading || connectionError) event.preventDefault(); }} className="btn primary block">{t(destinationLabel || "pricing_cta")}</Link>
             </div>
           </div>
         </div>

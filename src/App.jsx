@@ -215,7 +215,7 @@ function Routes() {
   const storeMatch = matchRoute("/workshops/:id", path);
   if (storeMatch) return <Storefront id={storeMatch.id} />;
   const newOrderMatch = matchRoute("/order/:id", path);
-  if (newOrderMatch) return <NewOrder workshopId={newOrderMatch.id} />;
+  if (newOrderMatch) return <NewOrder key={newOrderMatch.id} workshopId={newOrderMatch.id} />;
   const orderMatch = matchRoute("/orders/:number", path);
   if (orderMatch) return <OrderPortal number={orderMatch.number} />;
   if (path === "/for-business") return <ForBusiness />;

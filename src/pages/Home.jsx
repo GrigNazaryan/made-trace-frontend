@@ -1,7 +1,15 @@
+import { useAuth } from "../lib/AuthContext.jsx";
 import { useI18n } from "../lib/i18n/index.jsx";
 import { Link } from "../router/HashRouter.jsx";
 
 export default function Home() {
+  const { user, loading, connectionError } = useAuth();
+  const destination = user?.role === "company_owner"
+    ? "/workspace/overview"
+    : user?.role === "admin" ? "/admin/workshops" : user ? "/my-orders" : "/register";
+  const destinationLabel = user?.role === "company_owner"
+    ? "nav_workspace"
+    : user?.role === "admin" ? "nav_admin" : user ? "nav_my_orders" : null;
   const { t } = useI18n();
   return (
     <div className="page">
@@ -23,8 +31,8 @@ export default function Home() {
               <Link to="/directory" className="btn primary">
                 {t("home_cta_primary")} <span className="arr">→</span>
               </Link>
-              <Link to="/register" className="btn secondary">
-                {t("home_cta_secondary")}
+              <Link to={destination} aria-disabled={loading || connectionError} onClick={event => { if (loading || connectionError) event.preventDefault(); }} className="btn secondary">
+                {t(destinationLabel || "home_cta_secondary")}
               </Link>
             </div>
             <div className="space"></div>

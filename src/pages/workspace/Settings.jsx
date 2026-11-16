@@ -20,19 +20,23 @@ function ProfileForm({ workshop, t, onSaved }) {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setSaved(false);
     try {
       const body = {
         ...form,
         services: form.services.split(",").map((s) => s.trim()).filter(Boolean),
-        paymentLink: form.paymentLink || null,
+        paymentLink: form.paymentLink.trim() || null,
       };
       const updated = await api.updateProfile(body);
+      setForm(current => ({ ...current, paymentLink: updated.paymentLink || "" }));
       onSaved(updated);
+      setSaved(true);
     } catch (err) {
       setError(errorText(t, err.code));
     } finally {
@@ -44,6 +48,7 @@ function ProfileForm({ workshop, t, onSaved }) {
     <section className="card pad">
       <h3>{t("ws_settings_profile")}</h3>
       <form onSubmit={onSubmit} className="stack" style={{ marginTop: 14 }}>
+        {saved && <p className="small" role="status">{t("account_saved")}</p>}
         {error && <div className="notice" role="alert">{error}</div>}
         <label className="field">
           <span className="field-label">{t("ws_settings_name")}</span>
