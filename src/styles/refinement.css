@@ -117,3 +117,25 @@ html[lang="hy"] {
   .topbar-collapse.open .header-actions { flex-direction: column; align-items: stretch; margin: 0; }
   .topbar .topbar-collapse.open .header-actions .btn { display: inline-flex; width: 100%; justify-content: center; }
 }
+
+.workshop-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.workshop-calendar.single { grid-template-columns: minmax(0, 1fr); }
+.calendar-cell { padding: 10px; min-height: 75px; overflow-wrap: anywhere; font-size: 12px; }
+.calendar-job { display: block; margin-top: 6px; padding: 6px; background: var(--blue-2); border-radius: 6px; }
+.calendar-job > span { display: block; margin-top: 4px; }
+@media (max-width: 900px) {
+  .workshop-calendar { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+}
+
+.order-product-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+.order-product-picker .btn { flex-direction: column; align-items: stretch; min-width: 0; white-space: normal; }
+.order-product-picker .btn[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-2); }
+.order-product-picker .product-preview { height: 80px; }
+@media (max-width: 800px) {
+  .builder > .editor-canvas-shell { order: -1; }
+}

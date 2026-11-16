@@ -1,3 +1,4 @@
+import WsCalendar from "./pages/workspace/Calendar.jsx";
 import AccountSecurity, { PasswordRecovery, OAuthReturn } from "./pages/AccountSecurity.jsx";
 import { useState, useEffect } from "react";
 import { useI18n, languageNames, dictionaries } from "./lib/i18n/index.jsx";
@@ -223,6 +224,7 @@ function Routes() {
   if (path === "/my-orders") return <MyOrders />;
 
   if (path === "/workspace" || path === "/workspace/overview") return <WsOverview />;
+  if (path === "/workspace/calendar") return <WsCalendar />;
   if (path === "/workspace/orders") return <WsOrders />;
   const wsOrderMatch = matchRoute("/workspace/orders/:number", path);
   if (wsOrderMatch) return <WsOrderDetail number={wsOrderMatch.number} />;

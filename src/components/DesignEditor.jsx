@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../lib/i18n/index.jsx";
 import { createEditor } from "../lib/editorEngine.js";
-import { uploadToStorage } from "../lib/supabaseClient.js";
+import { readImageSize } from "../lib/supabaseClient.js";
+import { api } from "../lib/api.js";
 import { designFonts } from "../lib/fonts.js";
 
 /**
@@ -10,13 +11,36 @@ import { designFonts } from "../lib/fonts.js";
  * @param {string} props.color - current garment color (hex)
  * @param {{front:array, back:array}} props.value - current design
  * @param {(design:object)=>void} props.onChange
- * @param {string} [props.folder] - storage folder, defaults to "artwork"
+ * @param {string} props.workshopId - workshop that may receive this artwork
  */
-export default function DesignEditor({ product, color, value, onChange, folder = "artwork", initialSide = "front", onSideChange }) {
+export default function DesignEditor({ product, color, value, onChange, workshopId, orderNumber, prepareUpload, initialSide = "front", onSideChange }) {
   const { t } = useI18n();
   const canvasRef = useRef(null);
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  const replaceInput = useRef(false);
+  const uploadPreparation = useRef(prepareUpload);
+  uploadPreparation.current = prepareUpload;
+  const [preview, setPreview] = useState(null);
+
+  async function resolveImage(src) {
+    if (!src.startsWith("artwork/")) return src;
+    return (await api.artworkUrl({ path: src, orderNumber })).url;
+  }
+
+  async function saveArtwork(file) {
+    const dimensions = await readImageSize(file);
+    if (dimensions.width <= 1 || dimensions.height <= 1 ||
+        dimensions.width > 12000 || dimensions.height > 12000 ||
+        dimensions.width * dimensions.height > 40_000_000) {
+      throw new Error(t("artwork_upload_failed"));
+    }
+    await uploadPreparation.current?.();
+    const { uploadUrl, path } = await api.signArtwork({ filename: file.name, workshopId, orderNumber });
+    const result = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+    if (!result.ok) throw new Error(t("artwork_upload_failed"));
+    return { url: path, ...dimensions };
+  }
   const [side, setSide] = useState(initialSide);
   const [selected, setSelected] = useState(null);
   const [uploadError, setUploadError] = useState(null);
@@ -31,7 +55,8 @@ export default function DesignEditor({ product, color, value, onChange, folder =
       product,
       onChange: (state) => onChange(state),
       onSelection: (layer) => setSelected(layer),
-      uploadImage: (file) => uploadToStorage(file, folder),
+      uploadImage: saveArtwork,
+      resolveImage,
     });
     editor.changeSide(initialSide);
     editorRef.current = editor;
@@ -46,6 +71,15 @@ export default function DesignEditor({ product, color, value, onChange, folder =
     editorRef.current?.setColor(color);
   }, [color]);
 
+  useEffect(() => {
+    let active = true;
+    setPreview(null);
+    if (selected?.type === "image") {
+      resolveImage(selected.src).then(url => { if (active) setPreview(url); }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [selected?.src, orderNumber]);
+
   function changeSide(next) {
     setSide(next);
     onSideChange?.(next);
@@ -59,7 +93,7 @@ export default function DesignEditor({ product, color, value, onChange, folder =
     setUploadError(null);
     setUploading(true);
     try {
-      await editorRef.current.addImageFile(file);
+      await editorRef.current.addImageFile(file, { replace: replaceInput.current });
     } catch (err) {
       setUploadError(err.message || String(err));
     } finally {
@@ -105,7 +139,7 @@ export default function DesignEditor({ product, color, value, onChange, folder =
             <button className="btn secondary block" type="button" onClick={() => editor?.addText()}>
               {t("editor_add_text")}
             </button>
-            <button className="btn secondary block" type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+            <button className="btn secondary block" type="button" onClick={() => { replaceInput.current = false; fileInputRef.current?.click(); }} disabled={uploading}>
               {uploading ? t("common_loading") : t("editor_upload")}
             </button>
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onPickFile} />
@@ -121,7 +155,15 @@ export default function DesignEditor({ product, color, value, onChange, folder =
         </aside>
 
         <section className="card pad editor-canvas-shell">
-          <canvas ref={canvasRef} aria-label={t("editor_canvas")} />
+          <canvas ref={canvasRef} tabIndex={0} aria-label={t("editor_canvas")}
+            onKeyDown={event => {
+              const shifts = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+              const shift = shifts[event.key];
+              if (!shift || !selected) return;
+              event.preventDefault();
+              const step = event.shiftKey ? 10 : 1;
+              patch({ x: selected.x + shift[0] * step, y: selected.y + shift[1] * step });
+            }} />
         </section>
 
         <aside className="card editor-panel">
@@ -176,12 +218,12 @@ export default function DesignEditor({ product, color, value, onChange, folder =
           )}
           {selected?.type === "image" && (
             <div className="stack" style={{ marginTop: 11 }}>
-              <img
-                src={selected.src}
+              {preview && <img
+                src={preview}
                 alt=""
                 style={{ width: "100%", borderRadius: 10, border: "1px solid #e5e9f0" }}
-              />
-              <button className="btn secondary small block" type="button" onClick={() => fileInputRef.current?.click()}>
+              />}
+              <button className="btn secondary small block" type="button" onClick={() => { replaceInput.current = true; fileInputRef.current?.click(); }} disabled={uploading}>
                 {t("editor_replace")}
               </button>
             </div>

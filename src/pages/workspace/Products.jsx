@@ -7,13 +7,14 @@ import { uploadToStorage } from "../../lib/supabaseClient.js";
 import WorkspaceLayout from "./WorkspaceLayout.jsx";
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
+const STANDARD_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "One size"];
 const MOCKUP_TYPES = ["tee", "hoodie", "tank", "tote", "reference"];
 
 function emptyForm() {
   return {
     name: "", description: "", category: "Apparel", base: 0, acquisitionCost: "", published: false,
     colors: "#ffffff, #0d1b2a", sizes: "S, M, L, XL", mockupType: "tee", image: null,
-    paymentMode: "full", paymentPercent: 50,
+    paymentMode: "full", paymentPercent: 50, sizeAdjustments: {},
   };
 }
 
@@ -23,14 +24,35 @@ function toFormValues(p) {
     acquisitionCost: p.acquisitionCost ?? "", published: p.published,
     colors: (p.colors || []).join(", "), sizes: (p.sizes || []).join(", "), mockupType: p.mockupType,
     image: p.image || null,
-    paymentMode: p.paymentMode || "full", paymentPercent: p.paymentPercent || 50,
+    paymentMode: p.paymentMode || "full", paymentPercent: p.paymentPercent || 50, sizeAdjustments: p.sizeAdjustments || {},
   };
 }
 
-function ProductForm({ initial, t, onCancel, onSubmit, busy, error }) {
-  const [form, setForm] = useState(initial);
+function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
+  const [baseline] = useState(initial);
+  const [form, setForm] = useState(baseline);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+
+  const [nextColor, setNextColor] = useState("#3b82f6");
+  const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
+  const selectedSizes = form.sizes.split(",").map(size => size.trim()).filter(Boolean);
+  const selectedColors = form.colors.split(",").map(color => color.trim()).filter(Boolean);
+
+  useEffect(() => { onDirty(dirty || uploading); }, [dirty, uploading, onDirty]);
+  useEffect(() => {
+    if (!dirty && !uploading) return;
+    const beforeUnload = event => { event.preventDefault(); event.returnValue = ""; };
+    const beforeNavigate = event => {
+      if (!window.confirm(t("confirm_unsaved_product"))) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    window.addEventListener("madetrace:before-navigate", beforeNavigate);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      window.removeEventListener("madetrace:before-navigate", beforeNavigate);
+    };
+  }, [dirty, uploading, t]);
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -54,7 +76,8 @@ function ProductForm({ initial, t, onCancel, onSubmit, busy, error }) {
 
   function submit(e) {
     e.preventDefault();
-    const colors = form.colors.split(",").map((c) => c.trim()).filter(Boolean);
+    if (uploading) return;
+    const colors = selectedColors;
     const invalid = colors.find((c) => !HEX_RE.test(c));
     if (invalid) {
       onSubmit(null, `Not a valid hex color: ${invalid}`);
@@ -64,8 +87,9 @@ function ProductForm({ initial, t, onCancel, onSubmit, busy, error }) {
       name: form.name, description: form.description, category: form.category,
       base: Number(form.base) || 0,
       acquisitionCost: form.acquisitionCost === "" ? null : Number(form.acquisitionCost),
-      published: form.published, colors, sizes: form.sizes.split(",").map((s) => s.trim()).filter(Boolean),
-      sizeAdjustments: {}, mockupType: form.mockupType, printAreas: {}, image: form.image || null,
+      published: form.published, colors, sizes: selectedSizes,
+      ...(form.sizeAdjustments !== baseline.sizeAdjustments ? { sizeAdjustments: form.sizeAdjustments } : {}),
+      mockupType: form.mockupType, image: form.image || null,
       paymentMode: form.paymentMode, paymentPercent: Number(form.paymentPercent) || 50,
     });
   }
@@ -103,14 +127,53 @@ function ProductForm({ initial, t, onCancel, onSubmit, busy, error }) {
           <NumberInput className="control" type="number" min={0} step={0.01} value={form.acquisitionCost} onChange={(e) => set("acquisitionCost", e.target.value)} />
         </label>
       </div>
-      <label className="field">
-        <span className="field-label">{t("ws_product_colors")}</span>
-        <input className="control" value={form.colors} onChange={(e) => set("colors", e.target.value)} />
-      </label>
-      <label className="field">
-        <span className="field-label">{t("ws_product_sizes")}</span>
-        <input className="control" value={form.sizes} onChange={(e) => set("sizes", e.target.value)} />
-      </label>
+      <fieldset className="stack">
+        <legend>{t("editor_color")}</legend>
+        <div className="row wrap">
+          {selectedColors.map((color, index) => HEX_RE.test(color) && (
+            <button key={color + index} type="button" className="color-dot"
+              title={color} aria-label={`${t("common_delete")} ${color}`}
+              style={{ backgroundColor: color }}
+              onClick={() => set("colors", selectedColors.filter((_, i) => i !== index).join(", "))} />
+          ))}
+          <input type="color" value={nextColor} aria-label={t("catalog_custom_color")}
+            onChange={event => setNextColor(event.target.value)} />
+          <button type="button" className="btn secondary small"
+            onClick={() => set("colors", [...new Set([...selectedColors, nextColor])].join(", "))}>
+            {t("catalog_add_color")}
+          </button>
+        </div>
+      </fieldset>
+      <fieldset className="stack">
+        <legend>{t("editor_size")}</legend>
+        <div className="row wrap">
+          {STANDARD_SIZES.map(size => (
+            <button key={size} type="button" className={`chip ${selectedSizes.includes(size) ? "blue" : ""}`}
+              aria-pressed={selectedSizes.includes(size)} onClick={() => set("sizes",
+                (selectedSizes.includes(size) ? selectedSizes.filter(value => value !== size) : [...selectedSizes, size]).join(", "))}>
+              {size}
+            </button>
+          ))}
+        </div>
+        {selectedSizes.map(size => (
+          <label className="field" key={size}>
+            <span className="field-label">{size} · {t("catalog_size_adjustment")}</span>
+            <NumberInput className="control" step={0.01} value={form.sizeAdjustments[size] ?? ""}
+              onChange={event => set("sizeAdjustments", { ...form.sizeAdjustments, [size]: Number(event.target.value) || 0 })} />
+          </label>
+        ))}
+      </fieldset>
+      <details>
+        <summary>{t("catalog_advanced_variants")}</summary>
+        <label className="field">
+          <span className="field-label">{t("ws_product_colors")}</span>
+          <input className="control" value={form.colors} onChange={event => set("colors", event.target.value)} />
+        </label>
+        <label className="field">
+          <span className="field-label">{t("ws_product_sizes")}</span>
+          <input className="control" value={form.sizes} onChange={event => set("sizes", event.target.value)} />
+        </label>
+      </details>
       <label className="field">
         <span className="field-label">Image</span>
         {form.image && <img src={form.image} alt="" style={{ width: 120, borderRadius: 8, marginBottom: 8 }} />}
@@ -144,7 +207,7 @@ function ProductForm({ initial, t, onCancel, onSubmit, busy, error }) {
         <span>{t("ws_product_published")}</span>
       </label>
       <div className="row wrap">
-        <button className="btn primary" type="submit" disabled={busy}>
+        <button className="btn primary" type="submit" disabled={busy || uploading}>
           {busy ? t("common_loading") : t("ws_product_save")}
         </button>
         <button className="btn secondary" type="button" onClick={onCancel}>
@@ -296,9 +359,18 @@ export default function Products() {
   const [previewColors, setPreviewColors] = useState({});
   const [products, setProducts] = useState(null);
   const [error, setError] = useState(null);
+  const [editingDirty, setEditingDirty] = useState(false);
   const [editingId, setEditingId] = useState(null); // null = none, "new" = creating
   const [formError, setFormError] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  function selectProduct(id) {
+    if (id === editingId) return;
+    if (editingDirty && !window.confirm(t("confirm_unsaved_product"))) return;
+    setEditingDirty(false);
+    setEditingId(id);
+    setFormError(null);
+  }
 
   function load() {
     api.listProducts().then(setProducts).catch((err) => setError(errorText(t, err.code)));
@@ -316,6 +388,7 @@ export default function Products() {
     try {
       if (editingId === "new") await api.createProduct(body);
       else await api.updateProduct(editingId, body);
+      setEditingDirty(false);
       setEditingId(null);
       load();
     } catch (err) {
@@ -351,7 +424,8 @@ export default function Products() {
             t={t}
             busy={busy}
             error={formError}
-            onCancel={() => setEditingId(null)}
+            onDirty={setEditingDirty}
+            onCancel={() => selectProduct(null)}
             onSubmit={onSubmit}
           />
         </div>
@@ -383,7 +457,7 @@ export default function Products() {
                     ))}
                   </div>
                   <div className="row wrap card-actions">
-                    <button className="btn secondary small" onClick={() => { setEditingId(p.id); setFormError(null); }}>
+                    <button className="btn secondary small" onClick={() => selectProduct(p.id)}>
                       {t("ws_product_edit")}
                     </button>
                     <button className="btn danger small" onClick={() => onDelete(p.id)}>

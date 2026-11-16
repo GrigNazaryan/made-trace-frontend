@@ -1,3 +1,4 @@
+import { collectOrderPages } from "../lib/orderPages.js";
 import { orderPayment } from "../lib/orderPayment.js";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
@@ -29,15 +30,16 @@ export default function MyOrders() {
       return;
     }
     let cancelled = false;
-    api
-      .myOrders()
+    setOrders(null);
+    setError(null);
+    collectOrderPages(api.myOrders, {}, () => !cancelled)
       .then((rows) => !cancelled && setOrders(rows))
       .catch((err) => !cancelled && setError(errorText(t, err.code)));
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, [authLoading, connectionError, user]);
 
   const presentStatuses = useMemo(
     () => ALL_STATUSES.filter((s) => (orders || []).some((o) => o.status === s)),

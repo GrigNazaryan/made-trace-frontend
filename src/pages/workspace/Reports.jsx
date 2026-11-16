@@ -26,8 +26,10 @@ export default function Reports() {
               <p style={{ fontSize: 28, fontWeight: 700, margin: "8px 0 0" }}>{data.totalOrders}</p>
             </div>
             <div className="card pad" style={{ minWidth: 180 }}>
-              <span className="eyebrow">{t("ws_reports_completed_revenue")}</span>
-              <p style={{ fontSize: 28, fontWeight: 700, margin: "8px 0 0" }}>{formatMoney(data.completedRevenue, data.currency)}</p>
+              <span className="eyebrow">{t("reports_accepted_quotes")}</span>
+              <p style={{ fontSize: 28, fontWeight: 700, margin: "8px 0 0" }}>{(data.completedAcceptedQuotes || []).map(({ amount, currency }) => (
+                <span key={currency} style={{ display: "block" }}>{formatMoney(amount, currency)}</span>
+              ))}{!data.completedAcceptedQuotes?.length && "—"}</p>
             </div>
             <div className="card pad" style={{ minWidth: 180 }}>
               <span className="eyebrow">{t("ws_reports_completed_units")}</span>

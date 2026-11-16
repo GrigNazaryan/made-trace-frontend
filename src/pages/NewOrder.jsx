@@ -16,10 +16,6 @@ function queueDraftWrite(operation) {
   return draftWrites;
 }
 
-function saveOrderDraft(workshopId, lines, note) {
-  return queueDraftWrite(() => api.saveContinuation({ returnTo: "/order/" + workshopId, state: { lines, note } }));
-}
-
 function emptyLine(product) {
   return {
     localId: crypto.randomUUID(),
@@ -37,7 +33,7 @@ function hasArtwork(design) {
 }
 
 export default function NewOrder({ workshopId }) {
-  const { t } = useI18n();
+  const { t, formatMoney } = useI18n();
   const { user, loading: authLoading } = useAuth();
   const { navigate } = useRoute();
   const [workshop, setWorkshop] = useState(null);
@@ -46,39 +42,56 @@ export default function NewOrder({ workshopId }) {
   const [note, setNote] = useState("");
   const [submitError, setSubmitError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [estimate, setEstimate] = useState(null);
+  const [estimating, setEstimating] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
-  const [draftError, setDraftError] = useState(false);
+  const [draftError, setDraftError] = useState(null);
   const [draftAttempt, setDraftAttempt] = useState(0);
   const restoredDraft = useRef(false);
+  const draftRevision = useRef(0);
   const paused = useRef(false);
+  const submission = useRef(null);
 
   useEffect(() => {
     if (authLoading) return;
     let current = true;
-    api.continuation().then(saved => {
+    api.continuation(workshopId).then(saved => {
       if (!current) return;
       restoredDraft.current = saved?.returnTo === "/order/" + workshopId;
+      draftRevision.current = saved?.revision ?? 0;
       setLines(restoredDraft.current ? saved.state.lines : []);
       setNote(restoredDraft.current ? saved.state.note || "" : "");
-      setDraftError(false);
+      setDraftError(null);
       setDraftReady(true);
-    }).catch(() => { if (current) setDraftError(true); });
+    }).catch(error => { if (current) setDraftError(error.code || "network_error"); });
     return () => { current = false; };
   }, [workshopId, authLoading, draftAttempt]);
+
+  function saveOrderDraft() {
+    return queueDraftWrite(async () => {
+      const result = await api.saveContinuation({
+        returnTo: "/order/" + workshopId, state: { lines, note }, revision: draftRevision.current,
+      });
+      draftRevision.current = result.revision ?? draftRevision.current;
+    });
+  }
 
   useEffect(() => {
     if (!draftReady || !workshop || submitting) return;
     const timer = setTimeout(() => {
       if (paused.current) return;
-      saveOrderDraft(workshopId, lines, note).then(() => setDraftError(false)).catch(() => setDraftError(true));
+      saveOrderDraft().then(() => setDraftError(null)).catch(error => setDraftError(error.code || "network_error"));
     }, 750);
     return () => clearTimeout(timer);
   }, [draftReady, workshop, workshopId, lines, note, submitting]);
 
   useEffect(() => {
     if (!draftReady) return;
-    setPendingContinuation(() => saveOrderDraft(workshopId, lines, note));
-    const failed = () => setDraftError(true);
+    setPendingContinuation(() => saveOrderDraft().catch(error => {
+      setDraftError(error.code || "network_error");
+      throw error;
+    }));
+    const failed = () => setDraftError(current => current || "network_error");
     window.addEventListener("madetrace:draft-failed", failed);
     return () => {
       setPendingContinuation(null);
@@ -110,6 +123,30 @@ export default function NewOrder({ workshopId }) {
   }, [workshop,draftReady]);
 
   const groups = orderGroups(lines);
+  const quoteInput = orderPayloadLines(groups);
+  const quoteKey = JSON.stringify(quoteInput);
+  const currentEstimate = estimate?.key === quoteKey ? estimate : null;
+
+  async function previewEstimate() {
+    setEstimating(true);
+    try {
+      const result = await api.estimateOrder({ workshopId, lines: quoteInput });
+      setEstimate({ key: quoteKey, result });
+    } catch (error) {
+      setEstimate({ key: quoteKey, error: errorText(t, error.code) });
+    } finally {
+      setEstimating(false);
+    }
+  }
+
+  function chooseProduct(group, next) {
+    if (group.variants[0].productId === next.id) return;
+    if (group.variants.some(variant => hasArtwork(variant.design)) && !window.confirm(t("confirm_replace_product"))) return;
+    updateGroup(group, {
+      editorSide: "front", productId: next.id, color: next.colors[0] || "#f7f7f5",
+      size: next.sizes[0] || "", design: { front: [], back: [] },
+    });
+  }
 
   function addLine() {
     if (products.length === 0 || lines.length >= MAX_ORDER_LINES) return;
@@ -145,11 +182,14 @@ export default function NewOrder({ workshopId }) {
     e.preventDefault();
     setSubmitError(null);
     if (!user) {
-      try{await saveOrderDraft(workshopId, lines, note);}catch{setSubmitError(t("account_draft_failed"));return;}
+      try { await saveOrderDraft(); } catch (error) {
+        setDraftError(error.code || "network_error");
+        return;
+      }
       navigate("/login");
       return;
     }
-    if (lines.length === 0) return;
+    if (lines.length === 0 || paused.current) return;
     paused.current = true;
     setSubmitting(true);
     try {
@@ -158,11 +198,17 @@ export default function NewOrder({ workshopId }) {
         note,
         lines: orderPayloadLines(groups),
       };
-      const order = await api.createOrder(payload);
-      await queueDraftWrite(() => api.clearContinuation()).catch(() => {});
+      const fingerprint = JSON.stringify(payload);
+      if (submission.current?.fingerprint !== fingerprint) {
+        submission.current = { fingerprint, id: crypto.randomUUID() };
+      }
+      await saveOrderDraft();
+      const order = await api.createOrder({ ...payload, requestId: submission.current.id });
+      await queueDraftWrite(() => api.clearContinuation({ workshopId, revision: draftRevision.current })).catch(() => {});
       navigate(`/orders/${order.id}`,{replace:true});
     } catch (err) {
       paused.current = false;
+      if (err.code === "draft_conflict") setDraftError(err.code);
       setSubmitError(errorText(t, err.code));
     } finally {
       setSubmitting(false);
@@ -198,7 +244,13 @@ export default function NewOrder({ workshopId }) {
       </Link>
       <h2 style={{ marginTop: 10 }}>{t("neworder_title")}</h2>
 
-      {draftError && <p className="notice" role="status">{t("account_draft_failed")}</p>}
+      {draftError && <div className="notice" role="status">
+        {t(draftError === "draft_conflict" ? "err_draft_conflict" : "account_draft_failed")}
+        {draftError === "draft_conflict" && <button type="button" className="btn secondary small"
+          onClick={() => { if (window.confirm(t("confirm_reload_draft"))) setDraftAttempt(current => current + 1); }}>
+          {t("reload_saved_draft")}
+        </button>}
+      </div>}
       {products.length === 0 ? (
         <div className="empty">
           <strong>{t("neworder_no_products")}</strong>
@@ -219,30 +271,18 @@ export default function NewOrder({ workshopId }) {
               const capacity = designCapacity(lines.length, group);
               return (
                 <div className="card pad" key={group.id}>
+                  <strong>{t("neworder_product")}</strong>
+                  <div className="order-product-picker">
+                    {products.map(product => (
+                      <button key={product.id} type="button" className="btn secondary"
+                        aria-pressed={line.productId === product.id} onClick={() => chooseProduct(group, product)}>
+                        <ProductPreview product={product} color={line.productId === product.id ? line.color : product.colors[0]} />
+                        <strong>{product.name}</strong>
+                        <span className="small">{formatMoney(product.base, workshop.currency)}</span>
+                      </button>
+                    ))}
+                  </div>
                   <div className="row wrap" style={{ gap: 14, alignItems: "flex-end" }}>
-                    <label className="field" style={{ minWidth: 180 }}>
-                      <span className="field-label">{t("neworder_product")}</span>
-                      <select
-                        className="control"
-                        value={line.productId}
-                        onChange={(e) => {
-                          const next = products.find((p) => p.id === e.target.value);
-                          updateGroup(group, {
-                            editorSide: "front",
-                            productId: next.id,
-                            color: next.colors[0] || "#f7f7f5",
-                            size: next.sizes[0] || "",
-                            design: { front: [], back: [] },
-                          });
-                        }}
-                      >
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
                     <label className="field">
                       <span className="field-label">{t("neworder_color")}</span>
                       <div className="row wrap color-options">
@@ -276,12 +316,6 @@ export default function NewOrder({ workshopId }) {
                       </select>
                     </label>
                   </div>
-                  {product && (
-                    <div style={{ maxWidth: 150, marginTop: 14 }}>
-                      <ProductPreview product={product} color={line.color} />
-                    </div>
-                  )}
-
                   <div className="row wrap between" style={{ marginTop: 14 }}>
                     <strong>{t("design_group_total", { count: group.quantity })}</strong>
                     <button className="btn danger small" type="button" onClick={() => removeGroup(group)}>
@@ -337,7 +371,8 @@ export default function NewOrder({ workshopId }) {
                               onChange={design => updateLine(variant.localId, { design })}
                               initialSide={variant.editorSide || "front"}
                               onSideChange={side => updateLine(variant.localId, { editorSide: side })}
-                              folder={`orders/${workshopId}`} />
+                              workshopId={workshopId}
+                              prepareUpload={user ? undefined : () => saveOrderDraft()} />
                           </div>
                         )}
                       </div>
@@ -358,13 +393,35 @@ export default function NewOrder({ workshopId }) {
             <textarea className="control" rows={3} value={note} onChange={(e) => setNote(e.target.value)} maxLength={4000} />
           </label>
 
+          {!!lines.length && <section className="card pad" style={{ marginTop: 16 }}>
+            <div className="between">
+              <h3>{t("order_estimate")}</h3>
+              <button type="button" className="btn secondary small" onClick={previewEstimate} disabled={estimating}>
+                {t(estimating ? "common_loading" : "estimate_calculate")}
+              </button>
+            </div>
+            {currentEstimate?.error && <p className="notice" role="alert">{currentEstimate.error}</p>}
+            {currentEstimate?.result && (currentEstimate.result.estimate ? (
+              <div className="stack">
+                <p className="small">{t("estimate_not_quote")}</p>
+                {currentEstimate.result.estimate.breakdown.map((line, index) => (
+                  <div key={quoteInput[index].id} className="row between">
+                    <span>{line.name} × {line.quantity}</span>
+                    <strong>{formatMoney(line.total, currentEstimate.result.currency)}</strong>
+                  </div>
+                ))}
+                <strong>{formatMoney(currentEstimate.result.estimate.total, currentEstimate.result.currency)}</strong>
+              </div>
+            ) : <p className="small">{t("estimate_by_workshop")}</p>)}
+          </section>}
+
           {submitError && (
             <div className="notice" role="alert" style={{ marginTop: 12 }}>
               {submitError}
             </div>
           )}
 
-          <button className="btn primary block" type="submit" disabled={submitting || lines.length === 0} style={{ marginTop: 16 }}>
+          <button className="btn primary block" type="submit" disabled={submitting || lines.length === 0 || draftError === "draft_conflict"} style={{ marginTop: 16 }}>
             {submitting ? t("common_loading") : t("neworder_submit")}
           </button>
         </form>

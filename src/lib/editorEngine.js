@@ -1,10 +1,4 @@
-// Framework-free interactive layer editor. Draws straight onto a <canvas> with pointer
-// events for move/resize/rotate — ported from the original prototype's editor.js almost
-// unchanged (it never touched the DOM beyond its own canvas, so there was nothing React-
-// specific to rewrite). The one real change: addImageFile() used to embed the picture as a
-// data: URL for the in-memory demo; here it uploads to real storage and uses that public
-// URL instead, because the backend only accepts artwork hosted on our Supabase bucket
-// (see domain/validation.py storage_url()).
+// Canvas editor. The upload and preview callbacks keep file access separate from layer geometry.
 import { tintedMockup, garmentType } from "./mockups.js";
 import { printSurface } from "./printAreas.js";
 import { fontStack } from "./fonts.js";
@@ -14,19 +8,6 @@ const H = 650;
 const clone = (x) => structuredClone(x);
 const uid = (prefix = "id") => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || 0));
-
-const imgCache = new Map();
-function imageFor(src, onload) {
-  if (!src) return null;
-  if (!imgCache.has(src)) {
-    const img = new Image();
-    img.onload = onload;
-    img.onerror = onload;
-    img.src = src;
-    imgCache.set(src, img);
-  }
-  return imgCache.get(src);
-}
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -41,11 +22,27 @@ function imageFor(src, onload) {
  */
 export function createEditor(
   canvas,
-  { onChange = () => {}, onSelection = () => {}, initial = null, color = "#fdfcf9", product = {}, readOnly = false, uploadImage = null } = {}
+  { onChange = () => {}, onSelection = () => {}, initial = null, color = "#fdfcf9", product = {}, readOnly = false, uploadImage = null, resolveImage = src => Promise.resolve(src) } = {}
 ) {
+  const imgCache = new Map();
+
+  function imageFor(src) {
+    if (!src) return null;
+    if (!imgCache.has(src)) {
+      const img = new Image();
+      imgCache.set(src, img);
+      img.onload = () => { if (!destroyed) draw(); };
+      Promise.resolve().then(() => resolveImage(src)).then(url => {
+        if (!destroyed && url) img.src = url;
+      }).catch(() => {});
+    }
+    return imgCache.get(src);
+  }
+
   const ctx = canvas.getContext("2d");
-  canvas.width = W;
-  canvas.height = H;
+  const density = Math.min(3, Math.max(2, window.devicePixelRatio || 1));
+  canvas.width = W * density;
+  canvas.height = H * density;
   let state = clone(initial || { front: [], back: [] });
   let side = "front";
   let selected = null;
@@ -188,7 +185,7 @@ export function createEditor(
         ctx.fillText(line, 0, y, w);
       });
     } else if (l.type === "image") {
-      const img = imageFor(l.src, draw);
+      const img = imageFor(l.src);
       if (img?.complete && img.naturalWidth) ctx.drawImage(img, -w / 2, -h / 2, w, h);
       else {
         ctx.fillStyle = "#c8d9f2";
@@ -223,6 +220,7 @@ export function createEditor(
   function draw() {
     canvas.dataset.printSurface = JSON.stringify(surface());
     ctx.save();
+    ctx.setTransform(density, 0, 0, density, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.translate(300, 320);
     ctx.scale(zoom, zoom);
@@ -289,9 +287,15 @@ export function createEditor(
     }
     if (file.size > 8 * 1024 * 1024) throw new Error("Image limit: 8 MB. Try a smaller file.");
     if (!uploadImage) throw new Error("Image upload isn't configured.");
+    const uploadSide = side;
+    const uploadSelection = selected;
     const { url, width, height } = await uploadImage(file);
-    if (replace && getSelected()?.type === "image") patch({ src: url, originalWidth: width, originalHeight: height });
-    else addImage(url, width, height);
+    if (destroyed || side !== uploadSide) return;
+    if (replace && selected === uploadSelection && getSelected()?.type === "image") {
+      patch({ src: url, originalWidth: width, originalHeight: height });
+    } else if (!replace) {
+      addImage(url, width, height);
+    }
   }
   function patch(props) {
     const l = layers().find((v) => v.id === selected);

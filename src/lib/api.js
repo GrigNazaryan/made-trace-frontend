@@ -126,7 +126,7 @@ export async function downloadArtwork(orderNumber) {
 const get = (path, params) => request("GET", path, { params });
 const post = (path, body) => request("POST", path, { body: body ?? {} });
 const put = (path, body) => request("PUT", path, { body: body ?? {} });
-const del = (path) => request("DELETE", path);
+const del = (path, params) => request("DELETE", path, { params });
 async function postSession(path, body) {
   if (refreshInFlight) await refreshInFlight.catch(() => {});
   return post(path, body);
@@ -142,15 +142,17 @@ export const api = {
   bootstrapAdmin: (body) => post("/api/auth/bootstrap-admin", body),
   googleExchange: (body) => postSession("/api/auth/google/exchange", body),
   restoreSession,
+  signArtwork: (body) => post("/api/auth/artwork/sign", body),
+  artworkUrl: (body) => post("/api/auth/artwork/url", body),
   authOptions: () => get("/api/auth/options"),
   logout: () => postSession("/api/auth/logout"),
   revokeOthers: (body) => post("/api/auth/logout-others", body),
   forgotPassword: (body) => post("/api/auth/forgot-password", body),
   resetPassword: (body) => post("/api/auth/reset-password", body),
   deleteAccount: (body) => post("/api/auth/delete-account", body),
-  continuation: () => get("/api/auth/continuation"),
+  continuation: (workshopId) => get("/api/auth/continuation", { workshopId }),
   saveContinuation: (body) => put("/api/auth/continuation", body),
-  clearContinuation: () => del("/api/auth/continuation"),
+  clearContinuation: (params) => del("/api/auth/continuation", params),
 
   // --- public -------------------------------------------------------------
   health: () => get("/api/health"),
@@ -159,8 +161,9 @@ export const api = {
   billingPlans: () => get("/api/billing/plans"),
 
   // --- orders: customer side ----------------------------------------------
+  estimateOrder: (body) => post("/api/orders/estimate", body),
   createOrder: (body) => post("/api/orders", body),
-  myOrders: () => get("/api/orders/mine"),
+  myOrders: (params) => get("/api/orders/mine", params),
   getOrder: (number) => get(`/api/orders/${number}`),
   markOrderRead: (number) => post(`/api/orders/${number}/read`),
   sendMessage: (number, text) => post(`/api/orders/${number}/messages`, { text }),

@@ -29,6 +29,7 @@ export function HashRouterProvider({ children }) {
     const from = currentPath();
     const next = "#" + to;
     if (window.location.hash !== next) {
+      if (!window.dispatchEvent(new Event("madetrace:before-navigate", { cancelable: true }))) return;
       const method = replace || from === "/oauth-return" || (internal.test(from) && internal.test(to))
         ? "replaceState" : "pushState";
       window.history[method](null, "", next);

@@ -6,7 +6,7 @@ const BUCKET = "uploads";
 
 export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-function readImageSize(file) {
+export function readImageSize(file) {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const img = new Image();

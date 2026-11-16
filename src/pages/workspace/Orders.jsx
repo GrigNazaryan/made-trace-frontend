@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
 import { Link } from "../../router/HashRouter.jsx";
 import { api } from "../../lib/api.js";
@@ -16,14 +16,34 @@ export default function Orders() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
 
-  function load() {
-    api
-      .workspaceOrders({ status: status || undefined, q: q || undefined })
-      .then(setOrders)
-      .catch((err) => setError(errorText(t, err.code)));
+  const [more, setMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [search, setSearch] = useState("");
+  const generation = useRef(0);
+  const pageSize = 50;
+
+  async function load(before) {
+    const current = ++generation.current;
+    setError(null);
+    if (before) setLoadingMore(true);
+    try {
+      const rows = await api.workspaceOrders({ status, q: search, before, limit: pageSize });
+      if (generation.current !== current) return;
+      setOrders(previous => before ? [...previous, ...rows] : rows);
+      setMore(rows.length === pageSize);
+    } catch (error) {
+      if (generation.current === current) setError(errorText(t, error.code));
+    } finally {
+      if (generation.current === current) setLoadingMore(false);
+    }
   }
 
-  useEffect(load, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setOrders(null);
+    setMore(false);
+    load();
+    return () => { generation.current++; };
+  }, [status, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <WorkspaceLayout section="orders">
@@ -35,10 +55,10 @@ export default function Orders() {
           placeholder={t("ws_orders_search")}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && load()}
+          onKeyDown={(e) => e.key === "Enter" && setSearch(q.trim())}
           style={{ maxWidth: 320 }}
         />
-        <button className="btn secondary small" onClick={load} type="button">
+        <button className="btn secondary small" onClick={() => setSearch(q.trim())} type="button">
           ⌕
         </button>
         <select className="control" value={status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 200 }}>
@@ -83,6 +103,12 @@ export default function Orders() {
             </table>
           </div>
         )
+      )}
+      {orders?.length > 0 && more && (
+        <button type="button" className="btn secondary" style={{ marginTop: 14 }}
+          disabled={loadingMore} onClick={() => load(orders.at(-1).id)}>
+          {t(loadingMore ? "common_loading" : "orders_load_more")}
+        </button>
       )}
     </WorkspaceLayout>
   );

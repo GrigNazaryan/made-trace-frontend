@@ -128,7 +128,7 @@ function ProofSection({ order, t, onSent }) {
                   color={line.color}
                   value={designs[line.id]}
                   onChange={(design) => setDesigns((d) => ({ ...d, [line.id]: design }))}
-                  folder={`orders/${order.id}`}
+                  workshopId={order.workshopId} orderNumber={order.id}
                 />
               </div>
             )}

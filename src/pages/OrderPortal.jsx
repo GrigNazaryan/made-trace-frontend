@@ -77,9 +77,10 @@ function ProofCard({ order, t, onApprove, onRevise, busy }) {
       {(!proof || !proof.version) && <p className="small">{t("order_proof_none")}</p>}
       {proof && proof.version > 0 && (
         <>
-          {proof.approved && <p className="small">{t("order_proof_approved")}</p>}
+          {proof.stale && <p className="notice">{t("err_proof_stale_quote")}</p>}
+          {!proof.stale && proof.approved && <p className="small">{t("order_proof_approved")}</p>}
           {!proof.approved && proof.revisionRequested && <p className="small">{t("order_proof_revision_pending")}</p>}
-          {!proof.approved && !proof.revisionRequested && (
+          {!proof.stale && !proof.approved && !proof.revisionRequested && (
             <div className="row wrap" style={{ marginTop: 10 }}>
               <button className="btn primary small" disabled={busy} onClick={() => onApprove(proof.version)}>
                 {t("order_proof_approve")}
@@ -205,6 +206,12 @@ export default function OrderPortal({ number }) {
   }
 
   const payment = orderPayment(order);
+  const quote = order.quotes.at(-1);
+  const nextAction = order.status === "cancelled" || order.status === "completed" ? null :
+    payment.url ? ["order_pay", "payment"] :
+    quote && !quote.decision ? ["order_quote_title", "approval"] :
+    quote?.decision === "accepted" && order.proof?.version && !order.proof.stale && !order.proof.approved && !order.proof.revisionRequested
+      ? ["order_proof_title", "approval"] : null;
 
   return (
     <div className="page">
@@ -222,11 +229,20 @@ export default function OrderPortal({ number }) {
         <span className={`badge ${order.status}`}>{t(`status_${order.status}`)}</span>
       </div>
 
+      {nextAction && (
+        <div className="notice row between wrap" style={{ marginBottom: 14 }}>
+          <strong>{t("order_next_action")}</strong>
+          <button type="button" className="btn secondary small"
+            onClick={() => document.getElementById("order-" + nextAction[1])?.scrollIntoView({ block: "center" })}>
+            {t(nextAction[0])}
+          </button>
+        </div>
+      )}
       <ProgressTracker order={order} t={t} />
 
       {payment.message && <p className="notice order-payment" role="status">{t(payment.message)}</p>}
       {payment.url && (
-        <section className="card pad order-payment">
+        <section id="order-payment" className="card pad order-payment">
           <p className="small">
             {order.paymentPercent >= 100 ? t("order_pay_full_note") : t("order_pay_partial_note", { percent: order.paymentPercent })}
           </p>
@@ -257,7 +273,7 @@ export default function OrderPortal({ number }) {
         {order.note && <p className="small" style={{ marginTop: 10 }}>{order.note}</p>}
       </section>
 
-      <div className="order-review-grid">
+      <div id="order-approval" className="order-review-grid">
         <QuoteCard order={order} t={t} formatMoney={formatMoney} onDecision={onQuoteDecision} busy={busy} />
         <ProofCard order={order} t={t} onApprove={onProofApprove} onRevise={onProofRevise} busy={busy} />
       </div>

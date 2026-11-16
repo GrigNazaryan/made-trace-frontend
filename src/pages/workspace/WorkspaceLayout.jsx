@@ -6,6 +6,7 @@ import { Link, useRoute, BackButton } from "../../router/HashRouter.jsx";
 const NAV = [
   ["overview", "ws_nav_overview"],
   ["orders", "ws_nav_orders"],
+  ["calendar", "calendar_title"],
   ["products", "ws_nav_products"],
   ["templates", "ws_nav_templates"],
   ["clients", "ws_nav_clients"],
