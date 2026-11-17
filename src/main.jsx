@@ -8,6 +8,7 @@ import { HashRouterProvider } from "./router/HashRouter.jsx";
 import "./styles/styles.css";
 import "./styles/polish.css";
 import "./styles/refinement.css";
+import "./styles/classic.css";
 
 ReactDOM.createRoot(document.getElementById("app")).render(
   <React.StrictMode>

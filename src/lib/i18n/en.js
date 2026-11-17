@@ -2,6 +2,20 @@
 // Values can be a plain string, or an object keyed by CLDR plural category
 // ({one, few, many, other}) selected through Intl.PluralRules — see lib/i18n/index.jsx `t()`.
 export default {
+  classic_greeting: "Good morning, Northline.",
+  classic_attention: "Here's what needs your attention.",
+  classic_demo_preview: "Illustrative preview",
+  classic_demo_tee: "Running club tees",
+  classic_demo_hoodie: "Launch party hoodies",
+  classic_preview_footer: "A quieter way to manage every detail.",
+  classic_shared_history: "One shared order history",
+  classic_artwork_approved: "Artwork approved",
+  classic_discover_heading: "Studios worth exploring.",
+  classic_discover_lead: "Find an independent print shop for your next project.",
+  classic_business_heading: "Your workshop. More in sync.",
+  classic_business_lead: "Keep requests, approvals and production in one workspace.",
+  classic_search_suggestion: "Did you mean {suggestion}?",
+  classic_clear_filters: "Clear filters",
   "design_variant": "Design {index}",
   "design_group_total": "Total units: {count}",
   "design_add": "Add another design",

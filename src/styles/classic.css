@@ -1,0 +1,197 @@
+.classic-purple {
+  background: #f2edff;
+  color: #8572bd;
+}
+
+.hero-list strong,
+.preview-orders {
+  font-size: 12px;
+}
+
+.classic-preview-footer {
+  margin-top: 17px;
+}
+
+.preview-orders {
+  color: #2865d6;
+  font-weight: 750;
+}
+
+.section-cta .eyebrow {
+  color: #a6bee9;
+}
+
+.section-cta h2 {
+  margin-top: 12px;
+}
+
+.directory-result-bar {
+  margin-block: 20px 14px;
+}
+
+.store-hero .store-visual {
+  min-height: 220px;
+  height: auto;
+}
+
+.classic-store-product .btn {
+  align-self: start;
+  white-space: normal;
+}
+
+.workspace-side .side-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workspace-side .ui-icon,
+.journey-dot .ui-icon {
+  display: block;
+  width: 19px;
+  height: 19px;
+  flex: none;
+}
+
+.progress-card {
+  padding: 24px;
+  margin: 0 0 20px;
+  background: var(--panel);
+  border: 1px solid #e5ebf4;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.progress-card .order-journey {
+  padding: 25px 0 5px;
+}
+
+.progress-card .order-journey li {
+  gap: 7px;
+}
+
+.progress-card .order-journey li + li::before {
+  top: 21px;
+  width: calc(100% - 46px);
+  left: calc(-50% + 23px);
+}
+
+.progress-card .journey-dot {
+  width: 46px;
+  height: 46px;
+  color: #707d90;
+  background: #f2f4f8;
+  border: 2px solid #edf0f5;
+}
+
+.progress-card .complete .journey-dot {
+  color: #246d49;
+  background: #e9f5ee;
+  border-color: #d2eadd;
+}
+
+.progress-card .current .journey-dot {
+  color: white;
+  background: var(--blue);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 5px #edf3ff;
+}
+
+.progress-card .paused .journey-dot {
+  color: #8a6417;
+  background: #fff5de;
+  border-color: #e9c876;
+  box-shadow: 0 0 0 5px #fffaf0;
+}
+
+.request-builder-classic {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(285px, .48fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.request-builder-main,
+.request-builder-summary {
+  min-width: 0;
+}
+
+.request-builder-summary {
+  position: sticky;
+  top: 94px;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .request-builder-classic {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .request-builder-summary {
+    position: static;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 540px) {
+  .hero-list .badge {
+    max-width: 34%;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .progress-card {
+    padding: 17px 12px;
+  }
+
+  .progress-card .journey-dot {
+    width: 36px;
+    height: 36px;
+  }
+
+  .progress-card .order-journey li + li::before {
+    top: 17px;
+    width: calc(100% - 38px);
+    left: calc(-50% + 19px);
+  }
+}
+
+.overview-priorities {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.overview-priority {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 8px;
+  min-width: 0;
+  text-align: start;
+  padding: 14px;
+  color: var(--ink);
+}
+
+.overview-priority strong {
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-priority .ui-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.overview-priority[aria-pressed="true"] {
+  outline: 2px solid #83aaf3;
+  background: #f7faff;
+}
+
+@media (max-width: 680px) {
+  .overview-priorities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

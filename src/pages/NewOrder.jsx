@@ -323,6 +323,8 @@ export default function NewOrder({ workshopId }) {
         </div>
       ) : (
         <form onSubmit={onSubmit}>
+          <div className="request-builder-classic">
+          <div className="request-builder-main">
           {!user && (
             <div className="notice" role="alert">
               {t("neworder_login_required")}
@@ -473,7 +475,9 @@ export default function NewOrder({ workshopId }) {
             <textarea className="control" rows={3} value={note} onChange={(e) => setNote(e.target.value)} maxLength={4000} />
           </label>
 
-          {!!lines.length && <section className="card pad" style={{ marginTop: 16 }}>
+          </div>
+          <aside className="request-builder-summary">
+          {!!lines.length && <section className="card pad">
             <h3>{t("builder_review_title")}</h3>
             <p className="small">{workshop.name} · {t("design_group_total", {count:lines.reduce((total,line) => total + line.quantity, 0)})}</p>
             <ul className="review-lines">
@@ -509,6 +513,8 @@ export default function NewOrder({ workshopId }) {
           <button className="btn primary block" type="submit" data-action="send-order" disabled={submitting || hasUnavailable || lines.length === 0 || draftError === "draft_conflict"} style={{ marginTop: 16 }}>
             {submitting ? t("common_loading") : t("neworder_submit")}
           </button>
+          </aside>
+          </div>
         </form>
       )}
     </div>

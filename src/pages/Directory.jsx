@@ -3,8 +3,9 @@ import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { Link, BackButton } from "../router/HashRouter.jsx";
 import { useAuth } from "../lib/AuthContext.jsx";
 import { api } from "../lib/api.js";
+import { searchWorkshops } from "../lib/workshopSearch.js";
 
-function WorkshopCard({ w, t, canOrder }) {
+export function WorkshopCard({ w, t, canOrder }) {
   return (
     <article className="card studio-card">
       <Link to={`/workshops/${w.id}`} className={`studio-cover ${w.theme || "blue"}`} aria-label={w.name}>
@@ -77,20 +78,17 @@ export default function Directory() {
     [workshops]
   );
 
-  const results = useMemo(() => {
-    if (!workshops) return [];
-    const needle = search.trim().toLowerCase();
-    return workshops.filter((w) => {
-      if (country !== "all" && w.country !== country) return false;
-      if (city !== "all" && w.city !== city) return false;
-      if (service !== "all" && !(w.services || []).includes(service)) return false;
-      if (needle) {
-        const haystack = `${w.name} ${w.city} ${(w.services || []).join(" ")}`.toLowerCase();
-        if (!haystack.includes(needle)) return false;
-      }
-      return true;
-    });
-  }, [workshops, search, country, city, service]);
+  const { rows: results, suggestion } = useMemo(
+    () => searchWorkshops(workshops || [], { search, country, city, service }),
+    [workshops, search, country, city, service]
+  );
+
+  function clearFilters() {
+    setSearch("");
+    setCountry("all");
+    setCity("all");
+    setService("all");
+  }
 
   return (
     <div className="page">
@@ -159,7 +157,14 @@ export default function Directory() {
 
       {workshops !== null && (
         <>
-          <p className="small">{t("dir_count", { count: results.length })}</p>
+          <div className="directory-result-bar between wrap">
+            <span className="small" role="status">{t("dir_count", { count: results.length })}</span>
+            {suggestion && <button type="button" className="btn soft small" onClick={() => setSearch(suggestion)}>
+              {t("classic_search_suggestion", { suggestion })}
+            </button>}
+            {(search || country !== "all" || city !== "all" || service !== "all") &&
+              <button type="button" className="btn secondary small" onClick={clearFilters}>{t("classic_clear_filters")}</button>}
+          </div>
           {results.length === 0 ? (
             <div className="empty">
               <strong>{t("dir_empty")}</strong>

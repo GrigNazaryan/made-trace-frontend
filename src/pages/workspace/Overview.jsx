@@ -1,3 +1,4 @@
+import ClassicIcon from "../../components/ClassicIcon.jsx";
 import { collectOrderPages } from "../../lib/orderPages.js";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
@@ -35,6 +36,7 @@ export default function Overview() {
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0,10);
   const categories = {
+    requests: open.filter(order => order.status === "request"),
     overdue: open.filter(order => due(order) && due(order) < today),
     approval: open.filter(order => ["quoted", "proof", "clarification"].includes(order.status)),
     unread: open.filter(order => order.unread),
@@ -51,17 +53,27 @@ export default function Overview() {
 
       {error && <div className="notice" role="alert" style={{ marginTop: 14 }}>{error}</div>}
 
+      {orders && <div className="overview-priorities" role="group" aria-label={t("action_queue")}>
+        {[["requests", "status_request", "box"], ["overdue", "dashboard_overdue", "calendar"],
+          ["approval", "dashboard_approval", "review"], ["unread", "dashboard_unread", "track"]].map(([key, label, icon]) => (
+          <button key={key} type="button" className="card overview-priority"
+            aria-pressed={filter === key} onClick={() => setFilter(filter === key ? "all" : key)}>
+            <span className="feature-icon"><ClassicIcon name={icon} /></span>
+            <strong>{categories[key].length}</strong>
+            <span>{t(label)}</span>
+          </button>
+        ))}
+      </div>}
       {orders && <section className="card pad" style={{ marginTop: 18 }}>
         <div className="between">
           <h3>{t("action_queue")}</h3>
           <Link to="/workspace/calendar" className="btn secondary small">{t("calendar_title")}</Link>
         </div>
-        <div className="row wrap overview-filters" role="group" aria-label={t("action_queue")}>
-          {[["all", "myorders_filter_all", open], ["overdue","dashboard_overdue",categories.overdue],
-            ["approval","dashboard_approval",categories.approval], ["unread","dashboard_unread",categories.unread]]
-            .map(([key,label,items]) => <button key={key} type="button" className="btn secondary small"
-              aria-pressed={filter === key} onClick={() => setFilter(key)}>{t(label)} · {items.length}</button>)}
-        </div>
+        {filter !== "all" && <div className="overview-filters">
+          <button className="btn secondary small" type="button" onClick={() => setFilter("all")}>
+            {t("myorders_filter_all")} · {open.length}
+          </button>
+        </div>}
         {!queue.length && <p className="small">{t("ws_orders_empty")}</p>}
         {queue.slice(0, 12).map(order => (
           <Link key={order.id} to={`/workspace/orders/${order.id}`} className="activity-link">

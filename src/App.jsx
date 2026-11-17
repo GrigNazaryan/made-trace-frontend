@@ -117,8 +117,8 @@ function Header() {
       {connectionError && <div className="notice" role="alert"><button className="btn secondary small" onClick={refresh}>{t("account_retry")}</button></div>}
       <div className="topbar-inner">
         <Link to="/" className="brand">
-          <img className="brand-mark" src="/favicon.svg" width="30" height="30" alt="" />
-          MadeTrace
+          <img className="brand-mark" src="/favicon.svg" width="36" height="36" alt="" />
+          <span>MadeTrace<span className="os">OS</span></span>
         </Link>
         <button
           type="button"
@@ -197,7 +197,7 @@ function Footer() {
   return (
     <footer className="footer">
       <div>
-        <strong>MadeTrace</strong>
+        <strong>MadeTrace OS</strong>
         <p className="small" style={{ marginTop: 6, maxWidth: 360 }}>{t("footer_tagline")}</p>
         <p className="small" style={{ marginTop: 10 }}>{t("footer_rights", { year: new Date().getFullYear() })}</p>
       </div>

@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { api } from "../lib/api.js";
+import { WorkshopCard } from "./Directory.jsx";
 import { useAuth } from "../lib/AuthContext.jsx";
 import { useI18n } from "../lib/i18n/index.jsx";
 import { Link } from "../router/HashRouter.jsx";
@@ -11,6 +14,16 @@ export default function Home() {
     ? "nav_workspace"
     : user?.role === "admin" ? "nav_admin" : user ? "nav_my_orders" : null;
   const { t } = useI18n();
+  const [workshops, setWorkshops] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    api.directory().then(rows => {
+      if (active) setWorkshops(rows.slice(0, 3));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+
   return (
     <div className="page">
       <section className="hero">
@@ -44,18 +57,35 @@ export default function Home() {
                 <i></i>
                 <i></i>
                 <i></i>
-                <span style={{ marginLeft: 13, color: "#7a8797", fontSize: 11 }}>MadeTrace / Orders</span>
+                <span style={{ marginLeft: 13, color: "#7a8797", fontSize: 11 }}>MadeTrace OS / {t("ws_nav_orders")}</span>
               </div>
               <div className="window-body">
                 <div className="between">
                   <div>
-                    <span className="eyebrow">WORKSPACE / OVERVIEW</span>
-                    <h3 style={{ margin: "8px 0 2px" }}>{t("status_proof")}</h3>
-                    <span className="small">{t("status_production")}</span>
+                    <span className="eyebrow">{t("nav_workspace")} / {t("ws_nav_overview")}</span>
+                    <h3 style={{ margin: "8px 0 2px" }}>{t("classic_greeting")}</h3>
+                    <span className="small">{t("classic_attention")}</span>
                   </div>
+                  <span className="chip blue">{t("classic_demo_preview")}</span>
+                </div>
+                <div className="hero-list">
+                  <span className="bubble">OP</span>
+                  <div className="grow"><strong>{t("classic_demo_tee")}</strong><div className="small">Olivia Parker · {t("status_proof")}</div></div>
+                  <span className="badge proof">{t("status_proof")}</span>
+                </div>
+                <div className="hero-list">
+                  <span className="bubble classic-purple">EB</span>
+                  <div className="grow"><strong>{t("classic_demo_hoodie")}</strong><div className="small">Ethan Brooks · {t("status_production")}</div></div>
+                  <span className="badge production">{t("status_production")}</span>
+                </div>
+                <div className="classic-preview-footer between">
+                  <span className="small">{t("classic_preview_footer")}</span>
+                  <span className="preview-orders">{t("ws_nav_orders")} ↗</span>
                 </div>
               </div>
             </div>
+            <div className="floating">✦ &nbsp; {t("classic_shared_history")}</div>
+            <div className="floating right">✓ &nbsp; {t("classic_artwork_approved")}</div>
           </div>
         </div>
       </section>
@@ -83,6 +113,32 @@ export default function Home() {
             <p>{t("home_feature_status_body")}</p>
           </div>
         </div>
+      </section>
+
+      {workshops.length > 0 && (
+        <section className="section">
+          <div className="between section-head wrap">
+            <div>
+              <span className="eyebrow">{t("dir_eyebrow")}</span>
+              <h2>{t("classic_discover_heading")}</h2>
+              <p>{t("classic_discover_lead")}</p>
+            </div>
+            <Link to="/directory" className="btn secondary">{t("nav_directory")} →</Link>
+          </div>
+          <div className="grid3">
+            {workshops.map(workshop => <WorkshopCard key={workshop.id} w={workshop} t={t}
+              canOrder={!user || user.role === "customer"} />)}
+          </div>
+        </section>
+      )}
+
+      <section className="section-cta between wrap">
+        <div>
+          <span className="eyebrow">{t("nav_for_business")}</span>
+          <h2>{t("classic_business_heading")}</h2>
+          <p>{t("classic_business_lead")}</p>
+        </div>
+        <Link to="/for-business" className="btn">{t("nav_for_business")} →</Link>
       </section>
     </div>
   );

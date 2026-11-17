@@ -1,3 +1,4 @@
+import ClassicIcon from "../components/ClassicIcon.jsx";
 import { orderPayment } from "../lib/orderPayment.js";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
@@ -10,14 +11,18 @@ const STAGES = ["stage_request", "stage_review", "stage_production", "stage_read
 function ProgressTracker({ order, t }) {
   const { progress } = order;
   return (
-    <div className="progress-tracker">
-      <ol className="order-journey" aria-label={t("order_journey")}>
+    <section className="progress-card" aria-label={t("order_journey")}>
+      <div className="between wrap">
+        <span className="eyebrow">{t("order_journey")}</span>
+        <span className={`badge ${order.status}`}>{t(`status_${order.status}`)}</span>
+      </div>
+      <ol className="order-journey">
         {STAGES.map((key, index) => {
           const done = index < progress.stage || progress.complete;
           const current = index === progress.stage && !progress.complete;
-          return <li key={key} className={done ? "complete" : current ? "current" : ""}
+          return <li key={key} className={done ? "complete" : current ? `current${progress.exception ? " paused" : ""}` : ""}
             aria-current={current ? "step" : undefined}>
-            <span className="journey-dot" aria-hidden="true">{done ? "✓" : index + 1}</span>
+            <span className="journey-dot"><ClassicIcon name={done ? "check" : ["box", "review", "gear", "ready"][index]} /></span>
             <strong>{t(key)}</strong>
             <small>{t(done ? "journey_done" : current ? "journey_current" : "journey_next")}</small>
           </li>;
@@ -30,7 +35,7 @@ function ProgressTracker({ order, t }) {
             : t(`status_${progress.exception}`)}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 

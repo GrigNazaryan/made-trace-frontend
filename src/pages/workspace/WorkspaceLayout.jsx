@@ -1,19 +1,20 @@
+import ClassicIcon from "../../components/ClassicIcon.jsx";
 import { useEffect } from "react";
 import { useI18n } from "../../lib/i18n/index.jsx";
 import { useAuth } from "../../lib/AuthContext.jsx";
 import { Link, useRoute, BackButton } from "../../router/HashRouter.jsx";
 
 const NAV = [
-  ["overview", "ws_nav_overview"],
-  ["orders", "ws_nav_orders"],
-  ["calendar", "calendar_title"],
-  ["products", "ws_nav_products"],
-  ["templates", "ws_nav_templates"],
-  ["clients", "ws_nav_clients"],
-  ["reports", "ws_nav_reports"],
-  ["import", "ws_nav_import"],
-  ["billing", "ws_nav_billing"],
-  ["settings", "ws_nav_settings"],
+  ["overview", "ws_nav_overview", "home"],
+  ["orders", "ws_nav_orders", "box"],
+  ["calendar", "calendar_title", "calendar"],
+  ["products", "ws_nav_products", "shirt"],
+  ["templates", "ws_nav_templates", "review"],
+  ["clients", "ws_nav_clients", "users"],
+  ["reports", "ws_nav_reports", "chart"],
+  ["import", "ws_nav_import", "upload"],
+  ["billing", "ws_nav_billing", "pricing"],
+  ["settings", "ws_nav_settings", "gear"],
 ];
 
 /** `section` is the active sidebar slug; `children` is the page body. */
@@ -48,9 +49,9 @@ export default function WorkspaceLayout({ section, children }) {
           {t("ws_your_workspace")}
         </div>
         <div className="side-section">{t("ws_operations")}</div>
-        {NAV.map(([slug, labelKey]) => (
+        {NAV.map(([slug, labelKey, icon]) => (
           <Link key={slug} to={`/workspace/${slug}`} className={`side-link ${section === slug ? "active" : ""}`}>
-            {t(labelKey)}
+            <ClassicIcon name={icon} /><span>{t(labelKey)}</span>
           </Link>
         ))}
       </aside>

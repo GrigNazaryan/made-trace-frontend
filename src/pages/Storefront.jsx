@@ -99,7 +99,7 @@ export default function Storefront({ id }) {
             </Link>}
           </div>
         </div>
-        <div className="store-visual">
+        <div className={`store-visual studio-cover ${workshop.theme || "blue"}`}>
           <span className="hero-shape">{workshop.initials}</span>
         </div>
       </section>
@@ -117,7 +117,7 @@ export default function Storefront({ id }) {
               const Card = canOrder ? Link : "article";
               const target = canOrder ? {to: "/order/" + workshop.id + "?product=" + encodeURIComponent(p.id)} : {};
               return (
-              <Card {...target} className="card product-card" key={p.id}>
+              <Card {...target} className="card product-card classic-store-product" key={p.id}>
                 <ProductPreview product={p} color={p.colors?.[0]} />
                 <span className="eyebrow">{p.category}</span>
                 <h3>{p.name}</h3>
@@ -127,7 +127,7 @@ export default function Storefront({ id }) {
                   <br />
                   {t("store_from")} {formatMoney(p.base, workshop.currency)}
                 </p>
-                {canOrder && <span className="btn soft small">→</span>}
+                {canOrder && <span className="btn soft small">{t("store_start_order")} →</span>}
               </Card>
             );})}
           </div>
