@@ -1,7 +1,8 @@
 // Thin fetch wrapper around the FastAPI backend. Every function here returns parsed JSON
 // or throws an ApiError whose `.code` is the machine-readable string the backend sent
 // (e.g. "quote_outdated", "invalid:email") — i18n.js turns that into user-facing text.
-export const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const configuredApi = import.meta.env.VITE_API_BASE_URL || "";
+export const BASE_URL = configuredApi === "same-origin" ? location.origin : configuredApi.replace(/\/$/, "");
 const TOKEN_KEY = "madetrace_token";
 
 export class ApiError extends Error {
@@ -134,7 +135,9 @@ async function postSession(path, body) {
 
 export const api = {
   // --- auth -------------------------------------------------------------
-  register: (body) => postSession("/api/auth/register", body),
+  register: (body) => post("/api/auth/register", body),
+  verifyRegistration: (body) => postSession("/api/auth/register/verify", body),
+  googleResume: (body) => post("/api/auth/google/resume", body),
   login: (body) => postSession("/api/auth/login", body),
   adminLogin: (body) => postSession("/api/auth/admin-login", body),
   me: () => get("/api/auth/me"),
@@ -157,6 +160,8 @@ export const api = {
   // --- public -------------------------------------------------------------
   health: () => get("/api/health"),
   directory: () => get("/api/directory"),
+  publicTemplates: (workshopId, mockupType) => get("/api/workshops/" + workshopId + "/templates", { mockupType }),
+  clientOrders: (reference, params) => get("/api/workspace/clients/" + encodeURIComponent(reference) + "/orders", params),
   storefront: (workshopId) => get(`/api/workshops/${workshopId}`),
   billingPlans: () => get("/api/billing/plans"),
 
@@ -188,6 +193,7 @@ export const api = {
 
   listTemplates: () => get("/api/workspace/templates"),
   createTemplate: (body) => post("/api/workspace/templates", body),
+  updateTemplate: (id, body) => put("/api/workspace/templates/" + encodeURIComponent(id), body),
   deleteTemplate: (id) => del(`/api/workspace/templates/${id}`),
 
   workspaceOrders: (params) => get("/api/workspace/orders", params),

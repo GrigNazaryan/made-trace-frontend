@@ -1,6 +1,12 @@
+import "@fontsource-variable/manrope";
+import "@fontsource-variable/onest";
+import "@fontsource-variable/commissioner";
 // System fonts only — no remote font requests. Keep this list in sync with the backend's
 // FONTS set in domain/validation.py, or a chosen font will be rejected as invalid on submit.
 export const designFonts = [
+  ["Manrope", '"Manrope Variable", Arial, sans-serif'],
+  ["Onest", '"Onest Variable", Arial, sans-serif'],
+  ["Commissioner", '"Commissioner Variable", Arial, sans-serif'],
   ["Arial", "Arial, sans-serif"],
   ["Segoe UI", '"Segoe UI", Arial, sans-serif'],
   ["Verdana", "Verdana, Arial, sans-serif"],

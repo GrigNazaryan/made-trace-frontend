@@ -7,9 +7,10 @@ import fr from "./fr.js";
 import extras from "./security.js";
 import orderUI from "./order-ui.js";
 import workspaceUI from "./workspace-ui.js";
+import editorRelease from "./editor-release.js";
 
 export const dictionaries = { en, ru, hy, de, fr };
-for (const [language, words] of Object.entries(extras)) Object.assign(dictionaries[language], words, orderUI[language], workspaceUI[language]);
+for (const [language, words] of Object.entries(extras)) Object.assign(dictionaries[language], words, orderUI[language], workspaceUI[language], editorRelease[language]);
 export const languageNames = { en: "English", ru: "Русский", hy: "Հայերեն", de: "Deutsch", fr: "Français" };
 export const localeCodes = { en: "en-US", ru: "ru-RU", hy: "hy-AM", de: "de-DE", fr: "fr-FR" };
 

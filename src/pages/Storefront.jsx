@@ -1,10 +1,12 @@
 import ProductPreview from "../components/ProductPreview.jsx";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
+import { useAuth } from "../lib/AuthContext.jsx";
 import { Link } from "../router/HashRouter.jsx";
 import { api, ApiError } from "../lib/api.js";
 
 export default function Storefront({ id }) {
+  const { user } = useAuth();
   const { t, formatMoney } = useI18n();
   const [workshop, setWorkshop] = useState(null);
   const [error, setError] = useState(null);
@@ -48,6 +50,7 @@ export default function Storefront({ id }) {
     );
   }
 
+  const canOrder = !user || user.role === "customer";
   const products = (workshop.products || []).filter((p) => p.published);
 
   return (
@@ -88,12 +91,12 @@ export default function Storefront({ id }) {
             </div>
           )}
           <div className="row wrap">
-            <Link to={`/order/${workshop.id}`} className="btn primary">
+            {canOrder && <Link to={`/order/${workshop.id}`} className="btn primary">
               {t("store_start_order")} →
-            </Link>
-            <Link to="/my-orders" className="btn secondary">
+            </Link>}
+            {canOrder && <Link to="/my-orders" className="btn secondary">
               {t("store_track_order")}
-            </Link>
+            </Link>}
           </div>
         </div>
         <div className="store-visual">
@@ -110,8 +113,11 @@ export default function Storefront({ id }) {
           </div>
         ) : (
           <div className="products-grid">
-            {products.map((p) => (
-              <Link to={`/order/${workshop.id}`} className="card product-card" key={p.id}>
+            {products.map((p) => {
+              const Card = canOrder ? Link : "article";
+              const target = canOrder ? {to: "/order/" + workshop.id + "?product=" + encodeURIComponent(p.id)} : {};
+              return (
+              <Card {...target} className="card product-card" key={p.id}>
                 <ProductPreview product={p} color={p.colors?.[0]} />
                 <span className="eyebrow">{p.category}</span>
                 <h3>{p.name}</h3>
@@ -121,9 +127,9 @@ export default function Storefront({ id }) {
                   <br />
                   {t("store_from")} {formatMoney(p.base, workshop.currency)}
                 </p>
-                <span className="btn soft small">→</span>
-              </Link>
-            ))}
+                {canOrder && <span className="btn soft small">→</span>}
+              </Card>
+            );})}
           </div>
         )}
       </section>

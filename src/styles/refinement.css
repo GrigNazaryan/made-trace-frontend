@@ -139,3 +139,55 @@ html[lang="hy"] {
 @media (max-width: 800px) {
   .builder > .editor-canvas-shell { order: -1; }
 }
+
+.design-editor .editor-stage { position: relative; container-type: inline-size; }
+.editor-canvas-shell .editor-stage canvas { aspect-ratio: 600 / 650; height: auto; max-height: none; touch-action: pan-y pinch-zoom; }
+.editor-touch-zone { display: none; position: absolute; touch-action: none; --editor-pixel: calc(100cqw / 600); }
+.editor-touch-zone span { position: absolute; width: 20px; height: 20px; transform: translate(-50%, -50%); touch-action: none; }
+.editor-inline-text { position:absolute; z-index:3; min-width:100px; min-height:38px; resize:none; text-align:center; font-size:16px; padding:4px; box-shadow:0 2px 12px #27375240; }
+.editor-font-list { max-height: 13rem; overflow: auto; display:grid; gap:4px; }
+@media (any-pointer: coarse) {
+  .editor-touch-zone { display:block; }
+}
+@media (max-width: 700px) {
+  .editor-toolbar { gap: 6px; }
+  .editor-toolbar .editor-action-wrap { gap: 4px; }
+  .editor-properties.has-selection {
+    position: sticky; z-index: 5; bottom: 0; margin-bottom: env(safe-area-inset-bottom);
+    max-height: 35dvh; overflow: auto; box-shadow: 0 -5px 24px #23325225;
+    padding: 12px; border-radius: 12px;
+  }
+  .design-editor:has(.editor-inline-text:focus) .editor-properties { position: static; }
+  .topbar .topbar-collapse.open { max-height: calc(100dvh - 74px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .workspace-side { scrollbar-width: thin; }
+}
+
+.logout-button { white-space: nowrap; }
+.editor-mobile-hint { display:none; }
+@media (any-pointer: coarse) {
+  .editor-mobile-hint { display:inline; }
+  .editor-desktop-hint { display:none; }
+}
+
+.design-editor .builder > .editor-canvas-shell { width: 100%; margin-inline: auto; }
+.design-editor .editor-stage { width: 100%; }
+@media (min-width: 701px) {
+  .design-editor .builder {
+    grid-template-columns: minmax(0,1fr) minmax(175px, 230px);
+    grid-template-areas: "preview insert" "preview properties";
+    grid-template-rows: auto 1fr;
+    gap: 12px;
+  }
+  .design-editor .builder > .editor-canvas-shell { grid-area: preview; }
+  .design-editor .builder > .editor-panel:first-child { grid-area: insert; }
+  .design-editor .builder > .editor-properties { grid-area: properties; }
+}
+@media (max-width: 700px) {
+  .design-editor:has(.has-selection) { padding-bottom: 10rem; }
+  .editor-properties.has-selection {
+    position: fixed; bottom: 0; left: 8px; right: 8px;
+    padding-bottom: max(12px,env(safe-area-inset-bottom));
+    margin: 0; max-height: 30dvh;
+  }
+  .design-editor:has(.editor-inline-text:focus) .editor-properties { position: static; }
+}

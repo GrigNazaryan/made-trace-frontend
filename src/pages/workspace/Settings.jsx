@@ -1,3 +1,4 @@
+import { Link } from "../../router/HashRouter.jsx";
 import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
@@ -142,10 +143,14 @@ function PreferencesForm({ workshop, t, onSaved }) {
   );
 }
 
-function PricingForm({ workshop, t, onSaved }) {
-  const p = workshop.pricing || {};
+function PricingForm({ workshop, t, onSaved, mockupType }) {
+  const all = workshop.pricing || {};
+  const override = all.typeRules?.[mockupType];
+  const p = override || all;
+  const [inherits, setInherits] = useState(Boolean(mockupType && !override));
   const [form, setForm] = useState({
     mode: p.mode || "auto",
+    ...(mockupType ? {method: p.method || "width_tiers"} : {}),
     print: p.print ?? 0,
     printSmall: p.printSmall ?? p.print ?? 0,
     printLarge: p.printLarge ?? p.print ?? 0,
@@ -161,7 +166,12 @@ function PricingForm({ workshop, t, onSaved }) {
     setBusy(true);
     setError(null);
     try {
-      const updated = await api.updatePricing({ ...form, productPrices: {} });
+      const typeRules = {...all.typeRules};
+      if (mockupType) {
+        if (inherits) delete typeRules[mockupType];
+        else typeRules[mockupType] = form;
+      }
+      const updated = await api.updatePricing(mockupType ? {...all, typeRules} : {...form, typeRules});
       onSaved(updated);
     } catch (err) {
       setError(errorText(t, err.code));
@@ -177,6 +187,9 @@ function PricingForm({ workshop, t, onSaved }) {
       <h3>{t("ws_settings_pricing")}</h3>
       <form onSubmit={onSubmit} className="stack" style={{ marginTop: 14 }}>
         {error && <div className="notice" role="alert">{error}</div>}
+        {mockupType && <label className="check-row"><input type="checkbox" checked={inherits}
+          onChange={event => setInherits(event.target.checked)} />{t("pricing_use_default")}</label>}
+        <fieldset disabled={inherits} className="stack">
         <label className="field">
           <span className="field-label">{t("ws_settings_pricing_mode")}</span>
           <select className="control" value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })}>
@@ -184,19 +197,24 @@ function PricingForm({ workshop, t, onSaved }) {
             <option value="manual">{t("ws_settings_pricing_manual")}</option>
           </select>
         </label>
+        {mockupType && <label className="field"><span>{t("pricing_method")}</span>
+          <select className="control" value={form.method} onChange={event => setForm({...form,method:event.target.value})}>
+            {["width_tiers","per_side","per_item"].map(method => <option key={method} value={method}>{t("pricing_method_"+method)}</option>)}
+          </select>
+        </label>}
         <div className="form-cols">
           <label className="field">
-            <span className="field-label">{t("ws_settings_print_medium")}</span>
+            <span className="field-label">{t(form.method && form.method !== "width_tiers" ? "pricing_flat_rate" : "ws_settings_print_medium")}</span>
             <NumberInput className="control" type="number" min={0} step={0.01} value={form.print} onChange={num("print")} />
           </label>
-          <label className="field">
+          {(!form.method || form.method === "width_tiers") && <><label className="field">
             <span className="field-label">{t("ws_settings_print_small")}</span>
             <NumberInput className="control" type="number" min={0} step={0.01} value={form.printSmall} onChange={num("printSmall")} />
           </label>
           <label className="field">
             <span className="field-label">{t("ws_settings_print_large")}</span>
             <NumberInput className="control" type="number" min={0} step={0.01} value={form.printLarge} onChange={num("printLarge")} />
-          </label>
+          </label></>}
           <label className="field">
             <span className="field-label">{t("ws_settings_setup")}</span>
             <NumberInput className="control" type="number" min={0} step={0.01} value={form.setup} onChange={num("setup")} />
@@ -210,6 +228,7 @@ function PricingForm({ workshop, t, onSaved }) {
             <NumberInput className="control" type="number" min={0} max={100} step={0.1} value={form.discountPct} onChange={num("discountPct")} />
           </label>
         </div>
+        </fieldset>
         <button className="btn primary" type="submit" disabled={busy} style={{ justifySelf: "start" }}>
           {busy ? t("common_loading") : t("ws_settings_save_pricing")}
         </button>
@@ -263,7 +282,6 @@ export default function Settings() {
         <div className="settings-two" style={{ marginTop: 18 }}>
           <div className="stack">
             <ProfileForm workshop={workshop} t={t} onSaved={setWorkshop} />
-            <PricingForm workshop={workshop} t={t} onSaved={setWorkshop} />
           </div>
           <div className="stack">
             <SubscriptionCard workshop={workshop} t={t} formatDate={formatDate} />
@@ -273,4 +291,30 @@ export default function Settings() {
       )}
     </WorkspaceLayout>
   );
+}
+
+
+export function ProductPricing() {
+  const {t} = useI18n();
+  const [workshop, setWorkshop] = useState(null);
+  const [mockupType, setMockupType] = useState("");
+  const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    api.getProfile().then(setWorkshop).catch(error => setError(errorText(t, error.code)));
+  }, [t]);
+  return <WorkspaceLayout section="products">
+    <Link to="/workspace/products">{t("ws_nav_products")}</Link>
+    <label className="field" style={{margin:"16px 0"}}>
+      <span>{t("pricing_applies_to")}</span>
+      <select className="control" value={mockupType} onChange={event => {setMockupType(event.target.value);setSaved(false);}}>
+        <option value="">{t("pricing_default_rule")}</option>
+        {["tee","hoodie","cap","mug","tank","tote","reference"].map(type => <option key={type} value={type}>{t("mockup_" + type)}</option>)}
+      </select>
+    </label>
+    {error && <p role="alert">{error}</p>}
+    {saved && <p role="status">{t("pricing_saved")}</p>}
+    {workshop && <PricingForm key={mockupType} workshop={workshop} t={t} mockupType={mockupType}
+      onSaved={value => {setWorkshop(value);setSaved(true);}} />}
+  </WorkspaceLayout>;
 }

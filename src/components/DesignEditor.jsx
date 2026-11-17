@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useI18n } from "../lib/i18n/index.jsx";
+import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { createEditor } from "../lib/editorEngine.js";
-import { readImageSize } from "../lib/supabaseClient.js";
+import { normalizeArtwork, readImageSize } from "../lib/supabaseClient.js";
 import { api } from "../lib/api.js";
-import { designFonts } from "../lib/fonts.js";
+import { designFonts, fontStack } from "../lib/fonts.js";
 
 /**
  * @param {object} props
@@ -13,9 +13,20 @@ import { designFonts } from "../lib/fonts.js";
  * @param {(design:object)=>void} props.onChange
  * @param {string} props.workshopId - workshop that may receive this artwork
  */
-export default function DesignEditor({ product, color, value, onChange, workshopId, orderNumber, prepareUpload, initialSide = "front", onSideChange }) {
+function layerPosition(layer) {
+  return {left: layer.x / 6 + "%", top: layer.y / 6.5 + "%",
+    width: layer.width / 6 + "%", height: layer.height / 6.5 + "%",
+    transform: "translate(-50%, -50%) rotate(" + (layer.rotation || 0) + "deg)"};
+}
+
+export default function DesignEditor({ product, color, value, onChange, workshopId, orderNumber, prepareUpload, templates = [], allowUpload = true, initialSide = "front", onSideChange }) {
   const { t } = useI18n();
   const canvasRef = useRef(null);
+  const stageRef = useRef(null);
+  const inlineRef = useRef(null);
+  const imageToolsRef = useRef(null);
+  const [inline, setInline] = useState(false);
+  const [fontMenu, setFontMenu] = useState(false);
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const replaceInput = useRef(false);
@@ -29,6 +40,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   }
 
   async function saveArtwork(file) {
+    file = await normalizeArtwork(file);
     const dimensions = await readImageSize(file);
     if (dimensions.width <= 1 || dimensions.height <= 1 ||
         dimensions.width > 12000 || dimensions.height > 12000 ||
@@ -54,7 +66,13 @@ export default function DesignEditor({ product, color, value, onChange, workshop
       color,
       product,
       onChange: (state) => onChange(state),
+      interactionTarget: stageRef.current,
       onSelection: (layer) => setSelected(layer),
+      onActivate: layer => {
+        if (layer?.type === "text") setInline(true);
+        if (layer?.type === "image") imageToolsRef.current?.focus({ preventScroll: false });
+      },
+      onImageError: () => setUploadError(t("artwork_preview_failed")),
       uploadImage: saveArtwork,
       resolveImage,
     });
@@ -80,7 +98,12 @@ export default function DesignEditor({ product, color, value, onChange, workshop
     return () => { active = false; };
   }, [selected?.src, orderNumber]);
 
+  useEffect(() => {
+    if (inline) inlineRef.current?.focus({ preventScroll: true });
+  }, [inline]);
+
   function changeSide(next) {
+    setInline(false);
     setSide(next);
     onSideChange?.(next);
     editorRef.current?.changeSide(next);
@@ -95,7 +118,8 @@ export default function DesignEditor({ product, color, value, onChange, workshop
     try {
       await editorRef.current.addImageFile(file, { replace: replaceInput.current });
     } catch (err) {
-      setUploadError(err.message || String(err));
+      const message = err.code ? errorText(t, err.code) : t(err.message);
+      setUploadError(message === (err.code || err.message) ? t("artwork_upload_failed") : message);
     } finally {
       setUploading(false);
     }
@@ -108,14 +132,18 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   const editor = editorRef.current;
 
   return (
-    <div>
+    <div className="design-editor" onKeyDown={event => {
+      const isEntry = ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName);
+      if (isEntry) event.stopPropagation();
+      if (isEntry && event.key === "Enter" && !event.nativeEvent.isComposing && event.target.tagName === "INPUT") event.preventDefault();
+    }}>
       <div className="editor-toolbar">
         <div className="segmented">
           <button className={side === "front" ? "active" : ""} onClick={() => changeSide("front")} type="button">
-            {t("editor_front")}
+            {t(product?.mockupType === "mug" ? "mug_left" : "editor_front")}
           </button>
           <button className={side === "back" ? "active" : ""} onClick={() => changeSide("back")} type="button">
-            {t("editor_back")}
+            {t(product?.mockupType === "mug" ? "mug_right" : "editor_back")}
           </button>
         </div>
         <div className="editor-action-wrap">
@@ -125,8 +153,8 @@ export default function DesignEditor({ product, color, value, onChange, workshop
           <button className="btn secondary small" type="button" onClick={() => { editor?.redo(); forceRender((n) => n + 1); }} disabled={!editor?.canRedo()}>
             {t("editor_redo")}
           </button>
-          <button className="btn secondary small" type="button" onClick={() => editor?.setZoom(1)}>
-            {t("editor_fit")}
+          <button className="btn secondary small" type="button" disabled={!selected} title={t("editor_fit_layer")} onClick={() => editor?.fitSelection()}>
+            ⛶ {t("editor_fit_layer")}
           </button>
         </div>
       </div>
@@ -139,34 +167,66 @@ export default function DesignEditor({ product, color, value, onChange, workshop
             <button className="btn secondary block" type="button" onClick={() => editor?.addText()}>
               {t("editor_add_text")}
             </button>
-            <button className="btn secondary block" type="button" onClick={() => { replaceInput.current = false; fileInputRef.current?.click(); }} disabled={uploading}>
+            {allowUpload && <button className="btn secondary block" type="button" onClick={() => { replaceInput.current = false; fileInputRef.current?.click(); }} disabled={uploading}>
               {uploading ? t("common_loading") : t("editor_upload")}
-            </button>
-            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onPickFile} />
+            </button>}
+            {templates.length > 0 && <label className="field"><span>{t("editor_template")}</span>
+              <select className="control" value="" onChange={event => {
+                const template = templates.find(item => item.id === event.target.value);
+                if (template && (!(value?.front?.length || value?.back?.length) || window.confirm(t("confirm_replace_product")))) editor?.applyDesign(template.design);
+              }}><option value="">{t("editor_choose_template")}</option>
+                {templates.map(template => <option key={template.id} value={template.id}>{template.name}</option>)}
+              </select>
+            </label>}
+            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" hidden onChange={onPickFile} />
           </div>
           {uploadError && (
             <p className="small" style={{ color: "#c44b57", marginTop: 8 }}>
               {uploadError}
+              <button type="button" className="btn secondary small" onClick={() => {setUploadError(null); editor?.retryImages();}}>{t("account_retry")}</button>
             </p>
           )}
           <p className="instruction" style={{ marginTop: 16 }}>
-            {t("editor_instruction")}
+            <span className="editor-desktop-hint">{t("editor_desktop_hint")}</span>
+            <span className="editor-mobile-hint">{t("editor_mobile_hint")}</span>
           </p>
         </aside>
 
         <section className="card pad editor-canvas-shell">
-          <canvas ref={canvasRef} tabIndex={0} aria-label={t("editor_canvas")}
-            onKeyDown={event => {
-              const shifts = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-              const shift = shifts[event.key];
-              if (!shift || !selected) return;
-              event.preventDefault();
-              const step = event.shiftKey ? 10 : 1;
-              patch({ x: selected.x + shift[0] * step, y: selected.y + shift[1] * step });
-            }} />
+          <div className="editor-stage" ref={stageRef}>
+            <canvas ref={canvasRef} tabIndex={0} aria-label={t("editor_canvas")}
+              onKeyDown={event => {
+                const shifts = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+                const shift = shifts[event.key];
+                if (!shift || !selected) return;
+                event.preventDefault();
+                const step = event.shiftKey ? 10 : 1;
+                patch({ x: selected.x + shift[0] * step, y: selected.y + shift[1] * step });
+              }} />
+            {selected && !(inline && selected.type === "text") && (
+              <div className="editor-touch-zone" aria-hidden="true" style={layerPosition(selected)}>
+                {[[0,0],[50,0],[100,0],[0,50],[100,50],[0,100],[50,100],[100,100]].map(([x,y]) =>
+                  <span key={x + ":" + y} style={{left: x + "%", top: y + "%"}} />)}
+                <span style={{left:"50%",top:"0", marginTop:"calc(-27 * var(--editor-pixel, 0.6px))"}} />
+              </div>
+            )}
+            {inline && selected?.type === "text" && (
+              <textarea ref={inlineRef} className="control editor-inline-text" style={layerPosition(selected)}
+                aria-label={t("editor_text")} maxLength={80} value={selected.text}
+                onChange={event => patch({ text: event.target.value })}
+                onBlur={() => setInline(false)}
+                onKeyDown={event => {
+                  if (event.key === "Escape" && !event.nativeEvent.isComposing) {
+                    event.preventDefault();
+                    setInline(false);
+                    canvasRef.current.focus({preventScroll: true});
+                  }
+                }} />
+            )}
+          </div>
         </section>
 
-        <aside className="card editor-panel">
+        <aside className={"card editor-panel editor-properties" + (selected ? " has-selection" : "")}>
           <span className="eyebrow">{t("editor_selected")}</span>
           {!selected && (
             <p className="small" style={{ marginTop: 11 }}>
@@ -184,16 +244,18 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                   onChange={(e) => patch({ text: e.target.value })}
                 />
               </label>
-              <label className="field">
+              <div className="field">
                 <span className="field-label">{t("editor_font")}</span>
-                <select className="control" value={selected.font} onChange={(e) => patch({ font: e.target.value })}>
+                <button type="button" className="btn secondary small" aria-expanded={fontMenu} aria-label={t("editor_font") + ": " + selected.font}
+                  onClick={() => setFontMenu(!fontMenu)} style={{fontFamily: fontStack(selected.font)}}>{selected.font}</button>
+                {fontMenu && <div className="editor-font-list">
                   {designFonts.map(([name, stack]) => (
-                    <option key={name} value={name} style={{ fontFamily: stack }}>
-                      {name}
-                    </option>
+                    <button type="button" key={name} className="btn secondary small" aria-pressed={selected.font === name}
+                      onClick={() => { patch({ font: name }); setFontMenu(false); }}
+                      style={{fontFamily: stack}}>{name} · Aa Аа</button>
                   ))}
-                </select>
-              </label>
+                </div>}
+              </div>
               <label className="field">
                 <span className="field-label">{t("editor_size")}</span>
                 <input
@@ -202,8 +264,14 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                   min={8}
                   max={120}
                   value={selected.fontSize}
-                  onChange={(e) => patch({ fontSize: Number(e.target.value) })}
+                  onChange={(e) => patch({ fontSize: Number(e.target.value), stretch: false })}
                 />
+              </label>
+              <label className="field">
+                <span className="field-label">{t("editor_align")}</span>
+                <select className="control" value={selected.align || "center"} onChange={event => patch({align: event.target.value})}>
+                  {["left", "center", "right"].map(value => <option key={value} value={value}>{t("editor_align_" + value)}</option>)}
+                </select>
               </label>
               <label className="field">
                 <span className="field-label">{t("editor_color")}</span>
@@ -223,13 +291,26 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                 alt=""
                 style={{ width: "100%", borderRadius: 10, border: "1px solid #e5e9f0" }}
               />}
-              <button className="btn secondary small block" type="button" onClick={() => { replaceInput.current = true; fileInputRef.current?.click(); }} disabled={uploading}>
+              <button ref={imageToolsRef} className="btn secondary small block" type="button" onClick={() => { replaceInput.current = true; fileInputRef.current?.click(); }} disabled={uploading}>
                 {t("editor_replace")}
               </button>
             </div>
           )}
           {selected && (
             <div className="stack" style={{ marginTop: 16 }}>
+              <div className="form-cols">
+                {["width", "height"].map(key => <label key={key} className="field">
+                  <span className="field-label">{t("editor_" + key)} (cm)</span>
+                  <input className="control" type="number" min="0.5" max="100" step="0.1"
+                    key={selected.id + ":" + Math.round(editor.pxToCm(selected[key]) * 10)}
+                    defaultValue={(editor.pxToCm(selected[key])).toFixed(1)}
+                    onBlur={event => {
+                      if (Number.isFinite(event.target.valueAsNumber) && event.target.valueAsNumber > 0) {
+                        patch({[key]: event.target.valueAsNumber * editor.surface().pxPerCm, ...(selected.type === "text" ? {stretch:true} : {})});
+                      }
+                    }} />
+                </label>)}
+              </div>
               <label className="field">
                 <span className="field-label">{t("editor_rotation")}</span>
                 <input

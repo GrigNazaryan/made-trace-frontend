@@ -66,7 +66,6 @@ export function orderPayloadLines(groups) {
     size: line.size,
     quantity: line.quantity,
     design: line.design,
-    printWidthsCm: { front: 0, back: 0 },
     ...(group.variants.length > 1 && {
       designGroupId: group.id,
       designGroupQuantity: group.quantity,

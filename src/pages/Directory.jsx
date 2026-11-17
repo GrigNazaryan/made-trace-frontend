@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { Link, BackButton } from "../router/HashRouter.jsx";
+import { useAuth } from "../lib/AuthContext.jsx";
 import { api } from "../lib/api.js";
 
-function WorkshopCard({ w, t }) {
+function WorkshopCard({ w, t, canOrder }) {
   return (
     <article className="card studio-card">
       <Link to={`/workshops/${w.id}`} className={`studio-cover ${w.theme || "blue"}`} aria-label={w.name}>
@@ -30,9 +31,9 @@ function WorkshopCard({ w, t }) {
           <Link to={`/workshops/${w.id}`} className="btn secondary small">
             {t("dir_view")}
           </Link>
-          <Link to={`/order/${w.id}`} className="btn soft small">
+          {canOrder && <Link to={`/order/${w.id}`} className="btn soft small">
             {t("dir_quote")} →
-          </Link>
+          </Link>}
         </div>
       </div>
     </article>
@@ -40,6 +41,8 @@ function WorkshopCard({ w, t }) {
 }
 
 export default function Directory() {
+  const { user } = useAuth();
+  const canOrder = !user || user.role === "customer";
   const { t } = useI18n();
   const [workshops, setWorkshops] = useState(null);
   const [error, setError] = useState(null);
@@ -164,7 +167,7 @@ export default function Directory() {
           ) : (
             <div className="grid">
               {results.map((w) => (
-                <WorkshopCard w={w} t={t} key={w.id} />
+                <WorkshopCard w={w} t={t} canOrder={canOrder} key={w.id} />
               ))}
             </div>
           )}

@@ -8,17 +8,23 @@ import { destinationAfterAuth } from "../lib/authReturn.js";
 const GOOGLE_VERIFIER_KEY = "madetrace_google_verifier";
 let exchangeInFlight;
 
-function googleExchange(code) {
-  if (exchangeInFlight?.code === code) return exchangeInFlight.promise;
+function googleExchange(code, state) {
+  const key = state ? state + ":" + code : code;
+  if (exchangeInFlight?.key === key) return exchangeInFlight.promise;
   const verifier = sessionStorage.getItem(GOOGLE_VERIFIER_KEY);
   if (!code || !verifier) return Promise.reject(new Error("Missing Google sign-in context"));
-  const promise = api.googleExchange({ code, verifier }).then(data => {
+  const exchange = async () => {
+    const result = state ? await api.googleResume({ state, code, verifier }) : { result: "ok", code };
+    if (result.result !== "ok") throw Object.assign(new Error("Google sign-in"), { code: result.result });
+    return api.googleExchange({ code: result.code, verifier });
+  };
+  const promise = exchange().then(data => {
     if (sessionStorage.getItem(GOOGLE_VERIFIER_KEY) === verifier) {
       sessionStorage.removeItem(GOOGLE_VERIFIER_KEY);
     }
     return data;
   });
-  exchangeInFlight = { code, promise };
+  exchangeInFlight = { key, promise };
   return promise;
 }
 
@@ -39,7 +45,7 @@ export function GoogleButton({ disabled = false }) {
       const hex = array => Array.from(array, value => value.toString(16).padStart(2, "0")).join("");
       const verifier = hex(bytes);
       const challenge = hex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
-      const query = new URLSearchParams({ challenge });
+      const query = new URLSearchParams({ challenge, origin: location.origin });
       if (user) query.set("link", (await api.googleLinkToken()).token);
       sessionStorage.setItem(GOOGLE_VERIFIER_KEY, verifier);
       window.location.assign(BASE_URL + "/api/auth/google/start?" + query);
@@ -67,13 +73,13 @@ export function OAuthReturn() {
     let cancelled = false;
     const params = new URLSearchParams(location.hash.split("?")[1]);
     const result = params.get("result");
-    if (result !== "ok") {
+    if (result !== "ok" && result !== "resume") {
       sessionStorage.removeItem(GOOGLE_VERIFIER_KEY);
-      setError(result === "link-required" ? "account_google_link" : "account_google_failed");
+      setError(result === "link-required" ? "account_google_link" : result === "cancelled" ? "google_cancelled" : "google_retry");
       return;
     }
     let exchanging;
-    try { exchanging = googleExchange(params.get("code")); }
+    try { exchanging = googleExchange(params.get("code"), result === "resume" ? params.get("state") : null); }
     catch (error) { exchanging = Promise.reject(error); }
     exchanging.then(async data => {
       if (cancelled) return;
@@ -83,13 +89,21 @@ export function OAuthReturn() {
       if (!cancelled && location.hash.startsWith("#/oauth-return")) {
         navigate(destination, { replace: true });
       }
-    }).catch(() => { if (!cancelled) setError("account_google_failed"); });
+    }).catch(error => {
+      if (!cancelled) {
+        setError(error.code === "link-required" ? "account_google_link" : "google_retry");
+        history.replaceState(null, "", "#/oauth-return");
+      }
+    });
     return () => { cancelled = true; };
   }, [accept, navigate]);
 
   return <div className="page narrow">
     <p role="status">{t(error || "common_loading")}</p>
-    {error && <Link to={user ? "/account/security" : "/login"}>{t(user ? "account_security" : "nav_login")}</Link>}
+    {error && <>
+      <GoogleButton />
+      <Link to={user ? "/account/security" : "/login"}>{t(user ? "account_security" : "nav_login")}</Link>
+    </>}
   </div>;
 }
 

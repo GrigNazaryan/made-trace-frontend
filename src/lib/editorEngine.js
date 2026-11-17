@@ -22,19 +22,26 @@ const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || 0));
  */
 export function createEditor(
   canvas,
-  { onChange = () => {}, onSelection = () => {}, initial = null, color = "#fdfcf9", product = {}, readOnly = false, uploadImage = null, resolveImage = src => Promise.resolve(src) } = {}
+  { onChange = () => {}, onSelection = () => {}, onActivate = () => {}, onImageError = () => {}, interactionTarget = canvas, initial = null, color = "#fdfcf9", product = {}, readOnly = false, uploadImage = null, resolveImage = src => Promise.resolve(src) } = {}
 ) {
   const imgCache = new Map();
+  const failedImages = new Set();
 
   function imageFor(src) {
-    if (!src) return null;
+    if (!src || failedImages.has(src)) return null;
     if (!imgCache.has(src)) {
       const img = new Image();
       imgCache.set(src, img);
       img.onload = () => { if (!destroyed) draw(); };
+      const failed = () => {
+        imgCache.delete(src);
+        failedImages.add(src);
+        if (!destroyed) onImageError();
+      };
+      img.onerror = failed;
       Promise.resolve().then(() => resolveImage(src)).then(url => {
         if (!destroyed && url) img.src = url;
-      }).catch(() => {});
+      }).catch(failed);
     }
     return imgCache.get(src);
   }
@@ -48,6 +55,8 @@ export function createEditor(
   let selected = null;
   let zoom = 1;
   let drag = null;
+  let tap = null;
+  let lastTap = null;
   let garmentImage = null;
   let destroyed = false;
   let guides = true;
@@ -177,13 +186,23 @@ export function createEditor(
     if (l.type === "text") {
       ctx.font = `${Math.max(12, l.fontSize || 30)}px ${fontStack(l.font)}`;
       ctx.fillStyle = l.color || "#234d78";
-      ctx.textAlign = "center";
+      ctx.textAlign = l.align || "center";
       ctx.textBaseline = "middle";
-      const words = String(l.text || "TEXT").split("\n");
+      const words = String(l.text ?? "TEXT").split("\n");
+      const lineHeight = (l.fontSize || 30) * 1.18;
+      const startX = l.align === "left" ? -w / 2 : l.align === "right" ? w / 2 : 0;
+      if (l.stretch) {
+        const textWidth = Math.max(1, ...words.map(word => ctx.measureText(word).width));
+        ctx.save();
+        ctx.translate(startX, 0);
+        ctx.scale(w / textWidth, h / (words.length * lineHeight));
+      }
       words.forEach((line, i) => {
-        const y = (i - (words.length - 1) / 2) * (l.fontSize || 30) * 1.18;
-        ctx.fillText(line, 0, y, w);
+        const y = (i - (words.length - 1) / 2) * lineHeight;
+        if (l.stretch) ctx.fillText(line, 0, y);
+        else ctx.fillText(line, startX, y, w);
       });
+      if (l.stretch) ctx.restore();
     } else if (l.type === "image") {
       const img = imageFor(l.src);
       if (img?.complete && img.naturalWidth) ctx.drawImage(img, -w / 2, -h / 2, w, h);
@@ -202,7 +221,7 @@ export function createEditor(
         [-w / 2, -h / 2],
         [w / 2, -h / 2],
         [-w / 2, h / 2],
-        [w / 2, h / 2],
+        [w / 2, h / 2], [0, -h / 2], [0, h / 2], [-w / 2, 0], [w / 2, 0],
       ]) {
         ctx.beginPath();
         ctx.roundRect(x - 5, y - 5, 10, 10, 2);
@@ -282,10 +301,6 @@ export function createEditor(
     return layer;
   }
   async function addImageFile(file, { replace = false } = {}) {
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file?.type)) {
-      throw new Error("Choose an image file (PNG, JPG, or WebP).");
-    }
-    if (file.size > 8 * 1024 * 1024) throw new Error("Image limit: 8 MB. Try a smaller file.");
     if (!uploadImage) throw new Error("Image upload isn't configured.");
     const uploadSide = side;
     const uploadSelection = selected;
@@ -394,70 +409,99 @@ export function createEditor(
       if (l.visible === false) continue;
       const d = local(l, p);
       const { w, h } = size(l);
-      const hand = Math.hypot(d.x - w / 2, d.y - h / 2);
+      const handles = [[-1,-1], [1,-1], [-1,1], [1,1], [-1,0], [1,0], [0,-1], [0,1]];
+      const handle = handles.find(([ax, ay]) => Math.hypot(d.x - ax * w / 2, d.y - ay * h / 2) < 13);
       const rot = Math.hypot(d.x, d.y + h / 2 + 27);
       if (l.id === selected && rot < 15) return { id: l.id, mode: "rotate" };
-      if (l.id === selected && hand < 18) return { id: l.id, mode: "resize" };
+      if (l.id === selected && handle) return { id: l.id, mode: "resize", handle };
       if (Math.abs(d.x) <= w / 2 + 5 && Math.abs(d.y) <= h / 2 + 5) return { id: l.id, mode: "move" };
     }
     return null;
   }
   function down(e) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !e.isPrimary || drag || e.target.closest?.(".editor-inline-text")) return;
     const p = coords(e);
     const found = hit(p);
     select(found?.id || null);
-    if (!found) return;
-    drag = { id: found.id, mode: found.mode, start: p, original: clone(layers().find((l) => l.id === found.id)), moved: false };
-    canvas.setPointerCapture?.(e.pointerId);
+    tap = found ? { id: found.id, start: p, pointer: e.pointerId } : null;
+    if (!found || (e.pointerType === "touch" && !e.target.closest?.(".editor-touch-zone"))) return;
+    drag = { ...found, start: p, pointer: e.pointerId,
+      original: clone(layers().find(l => l.id === found.id)), moved: false };
+    e.target.setPointerCapture?.(e.pointerId);
   }
+
   function pointerMove(e) {
-    if (!drag) return;
     const p = coords(e);
-    const l = layers().find((l) => l.id === drag.id);
+    if (tap?.pointer === e.pointerId && Math.hypot(p.x - tap.start.x, p.y - tap.start.y) > 8) tap = null;
+    if (drag?.pointer !== e.pointerId) return;
+    const l = layers().find(item => item.id === drag.id);
     if (!l) return;
     const dx = p.x - drag.start.x;
     const dy = p.y - drag.start.y;
-    if (Math.hypot(dx, dy) > 1) drag.moved = true;
+    if (!drag.moved && Math.hypot(dx, dy) < 3) return;
+    drag.moved = true;
     if (drag.mode === "move") {
       l.x = drag.original.x + dx;
       l.y = drag.original.y + dy;
-      clampLayer(l);
+    } else if (drag.mode === "resize") {
+      const [ax, ay] = drag.handle;
+      const before = local(drag.original, drag.start);
+      const after = local(drag.original, p);
+      const old = size(drag.original);
+      const width = old.w + ax * (after.x - before.x) * 2;
+      const height = old.h + ay * (after.y - before.y) * 2;
+      if (ax && ay) {
+        const factor = clamp((width * old.w + height * old.h) / (old.w ** 2 + old.h ** 2), 0.1, 20);
+        l.width = old.w * factor;
+        l.height = old.h * factor;
+      } else {
+        if (ax) l.width = clamp(width, 18, zone().w);
+        if (ay) l.height = clamp(height, 12, zone().h);
+      }
+      if (l.type === "text") l.stretch = true;
+    } else if (drag.mode === "rotate") {
+      const angle = Math.atan2(p.y - l.y, p.x - l.x);
+      l.rotation = Math.round(((angle * 180) / Math.PI + 90) / 5) * 5;
     }
-    if (drag.mode === "resize") {
-      const d = local(drag.original, p);
-      const w = clamp(d.x + size(drag.original).w / 2, 32, zone().w);
-      const aspect = size(drag.original).w / size(drag.original).h;
-      l.width = w;
-      l.height = clamp(w / aspect, 16, zone().h);
-      clampLayer(l);
-    }
-    if (drag.mode === "rotate") {
-      const a = Math.atan2(p.y - l.y, p.x - l.x);
-      l.rotation = Math.round(((a * 180) / Math.PI + 90) / 5) * 5;
-      clampLayer(l);
-    }
+    clampLayer(l);
     draw();
     onSelection(getSelected());
   }
-  function up() {
-    if (drag?.moved) snapshot();
-    drag = null;
+
+  function up(e) {
+    if (drag?.pointer === e.pointerId) {
+      if (drag.moved && e.type === "pointercancel") {
+        Object.assign(layers().find(item => item.id === drag.id) || {}, drag.original);
+        draw();
+        onSelection(getSelected());
+      } else if (drag.moved) snapshot();
+      drag = null;
+    }
+    if (tap?.pointer !== e.pointerId) return;
+    if (e.type !== "pointercancel") {
+      const now = performance.now();
+      if (lastTap?.id === tap.id && now - lastTap.at < 360 &&
+          Math.hypot(lastTap.point.x - tap.start.x, lastTap.point.y - tap.start.y) < 24) {
+        onActivate(getSelected());
+        lastTap = null;
+      } else lastTap = { id: tap.id, at: now, point: tap.start };
+    }
+    tap = null;
   }
-  if (!readOnly) {
-    canvas.addEventListener("pointerdown", down);
-    canvas.addEventListener("pointermove", pointerMove);
-    canvas.addEventListener("pointerup", up);
-    canvas.addEventListener("pointercancel", up);
-  }
+
+  const events = { pointerdown: down, pointermove: pointerMove, pointerup: up, pointercancel: up };
+  if (!readOnly) Object.entries(events).forEach(([name, listener]) => interactionTarget.addEventListener(name, listener));
   canvas.dataset.previewMode = readOnly ? "proof" : "editor";
   canvas.dataset.guides = String(!readOnly);
+  const onFontsLoaded = () => { if (!destroyed) draw(); };
+  document.fonts?.addEventListener("loadingdone", onFontsLoaded);
   refreshGarment();
   draw();
   notify();
 
   return {
     setColor,
+    retryImages: () => { failedImages.clear(); draw(); },
     setGuides,
     surface,
     getState,
@@ -467,6 +511,16 @@ export function createEditor(
     addText,
     addImage,
     addImageFile,
+    applyDesign: design => {
+      state = clone(design);
+      selected = null;
+      draw();
+      snapshot();
+    },
+    fitSelection: () => {
+      const z = zone();
+      patch({ x: z.x + z.w / 2, y: z.y + z.h / 2 });
+    },
     patch,
     remove,
     duplicate,
@@ -485,10 +539,8 @@ export function createEditor(
     pxToCm: (n) => n / cm(),
     destroy: () => {
       destroyed = true;
-      canvas.removeEventListener("pointerdown", down);
-      canvas.removeEventListener("pointermove", pointerMove);
-      canvas.removeEventListener("pointerup", up);
-      canvas.removeEventListener("pointercancel", up);
+      document.fonts?.removeEventListener("loadingdone", onFontsLoaded);
+      Object.entries(events).forEach(([name, listener]) => interactionTarget.removeEventListener(name, listener));
     },
   };
 }

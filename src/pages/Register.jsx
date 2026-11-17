@@ -1,6 +1,7 @@
 import { destinationAfterAuth } from "../lib/authReturn.js";
 import { GoogleButton } from "./AccountSecurity.jsx";
 import { useState } from "react";
+import { api } from "../lib/api.js";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { useAuth } from "../lib/AuthContext.jsx";
 import { Link, useRoute, BackButton } from "../router/HashRouter.jsx";
@@ -12,7 +13,7 @@ function destinationFor(role) {
 
 export default function Register() {
   const { t } = useI18n();
-  const { register } = useAuth();
+  const { verifyRegistration } = useAuth();
   const { navigate } = useRoute();
 
   const [role, setRole] = useState("customer");
@@ -25,6 +26,8 @@ export default function Register() {
   const [city, setCity] = useState("");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [ticket, setTicket] = useState("");
+  const [code, setCode] = useState("");
   const [createdAccount,setCreatedAccount]=useState(null);
 
   async function onSubmit(e) {
@@ -42,7 +45,11 @@ export default function Register() {
       if (role === "company_owner") {
         body.company = { name: companyName.trim(), country, city: city.trim(), services: [], description: "" };
       }
-      const user = createdAccount || await register(body);
+      if (!ticket) {
+        setTicket((await api.register(body)).ticket);
+        return;
+      }
+      const user = createdAccount || await verifyRegistration({ ticket, code });
       setCreatedAccount(user);
       navigate(await destinationAfterAuth(user.role),{replace:true});
     } catch (err) {
@@ -64,6 +71,18 @@ export default function Register() {
             </div>
           )}
 
+          {ticket ? <>
+            <p>{t("registration_code_sent")} <strong>{email}</strong></p>
+            <label className="field">
+              <span>{t("registration_code")}</span>
+              <input className="control" type="text" inputMode="numeric" autoComplete="one-time-code"
+                maxLength={6} pattern="[0-9]{6}" value={code}
+                onChange={event => setCode(event.target.value.replace(/[^0-9]/g, ""))} required />
+            </label>
+            <button className="btn secondary" type="button" disabled={busy} onClick={() => {
+              setTicket(""); setCode(""); setError(null);
+            }}>{t("registration_restart")}</button>
+          </> : <>
           <div className="inline-options" role="radiogroup">
             <label className="chip">
               <input type="radio" name="role" checked={role === "customer"} onChange={() => setRole("customer")} />
@@ -150,11 +169,12 @@ export default function Register() {
             </p>
           )}
 
+          </>}
           <button className="btn primary block" type="submit" disabled={busy}>
-            {busy ? t("common_loading") : t("auth_submit_register")}
+            {busy ? t("common_loading") : t(ticket ? "registration_verify" : "auth_submit_register")}
           </button>
         </form>
-        <GoogleButton disabled={role === "company_owner"} />
+        {!ticket && <GoogleButton disabled={role === "company_owner"} />}
         <p className="small" style={{ marginTop: 16 }}>
           <Link to="/login">{t("auth_switch_to_login")}</Link>
         </p>

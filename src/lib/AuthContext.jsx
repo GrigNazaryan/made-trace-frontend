@@ -40,7 +40,12 @@ export function AuthProvider({ children }) {
     return null;
   }, [accept]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    const params = new URLSearchParams(location.hash.split("?")[1]);
+    if (location.hash.startsWith("#/oauth-return?") && ["ok", "resume"].includes(params.get("result"))) {
+      setLoading(false);
+    } else refresh();
+  }, [refresh]);
 
   useEffect(() => {
     const ended = () => { revision.current++; setLoading(false); setUser(null); backup.current = null; setImpersonating(false); };
@@ -50,7 +55,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => accept(await api.login({ email, password })), [accept]);
   const adminLogin = useCallback(async (email, password) => accept(await api.adminLogin({ email, password })), [accept]);
-  const register = useCallback(async body => accept(await api.register(body)), [accept]);
+  const verifyRegistration = useCallback(async body => accept(await api.verifyRegistration(body)), [accept]);
 
   const logout = useCallback(async () => {
     try { await api.logout(); } catch { setConnectionError(true); return false; }
@@ -76,7 +81,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, loading, connectionError, refresh, login, adminLogin, register, logout,
+      user, loading, connectionError, refresh, login, adminLogin, verifyRegistration, logout,
       accept, setUser, impersonateAs, stopImpersonating,
       isImpersonated: !!user?.isImpersonated, isReadOnlyImpersonation, canStopImpersonating: !!backup.current
     }}>

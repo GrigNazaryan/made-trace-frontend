@@ -36,6 +36,8 @@ export default function NewOrder({ workshopId }) {
   const { t, formatMoney } = useI18n();
   const { user, loading: authLoading } = useAuth();
   const { navigate } = useRoute();
+  const [templates, setTemplates] = useState({});
+  const requestedProduct = new URLSearchParams(location.hash.split("?")[1]).get("product");
   const [workshop, setWorkshop] = useState(null);
   const [error, setError] = useState(null);
   const [lines, setLines] = useState([]);
@@ -118,9 +120,20 @@ export default function NewOrder({ workshopId }) {
   const products = (workshop?.products || []).filter((p) => p.published);
 
   useEffect(() => {
-    if (draftReady && !restoredDraft.current && products.length > 0 && lines.length === 0) setLines([emptyLine(products[0])]);
+    if (draftReady && !restoredDraft.current && products.length > 0 && lines.length === 0) setLines([emptyLine(products.find(product => product.id === requestedProduct) || products[0])]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workshop,draftReady]);
+
+  const templateType = lines.find(line => line.editing)?.productId;
+  const mockup = products.find(product => product.id === templateType)?.mockupType;
+  useEffect(() => {
+    if (!mockup || mockup === "reference") return;
+    let active = true;
+    api.publicTemplates(workshopId, mockup).then(items => {
+      if (active) setTemplates(current => ({...current, [mockup]: items}));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [workshopId, mockup]);
 
   const groups = orderGroups(lines);
   const quoteInput = orderPayloadLines(groups);
@@ -181,6 +194,7 @@ export default function NewOrder({ workshopId }) {
   async function onSubmit(e) {
     e.preventDefault();
     setSubmitError(null);
+    if (e.nativeEvent.submitter?.dataset.action !== "send-order") return;
     if (!user) {
       try { await saveOrderDraft(); } catch (error) {
         setDraftError(error.code || "network_error");
@@ -371,6 +385,7 @@ export default function NewOrder({ workshopId }) {
                               onChange={design => updateLine(variant.localId, { design })}
                               initialSide={variant.editorSide || "front"}
                               onSideChange={side => updateLine(variant.localId, { editorSide: side })}
+                              templates={templates[productFor(variant)?.mockupType] || []}
                               workshopId={workshopId}
                               prepareUpload={user ? undefined : () => saveOrderDraft()} />
                           </div>
@@ -421,7 +436,7 @@ export default function NewOrder({ workshopId }) {
             </div>
           )}
 
-          <button className="btn primary block" type="submit" disabled={submitting || lines.length === 0 || draftError === "draft_conflict"} style={{ marginTop: 16 }}>
+          <button className="btn primary block" type="submit" data-action="send-order" disabled={submitting || lines.length === 0 || draftError === "draft_conflict"} style={{ marginTop: 16 }}>
             {submitting ? t("common_loading") : t("neworder_submit")}
           </button>
         </form>

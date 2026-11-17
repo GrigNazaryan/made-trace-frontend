@@ -1,6 +1,7 @@
+import { manufactureMockup } from "./objectMockups.js";
 // Canonical paired photographs (front+back in one image); every color is derived from
 // identical pixels/alpha via tintPixels() below — see /public/mockups.
-export const mockupTypes = ["tee", "hoodie", "tank", "tote"];
+export const mockupTypes = ["tee", "hoodie", "tank", "tote", "cap", "mug"];
 export const supportsEditor = (product) => product?.mockupType !== "reference";
 
 export function garmentType(product = {}) {
@@ -56,13 +57,15 @@ export function tintPixels(data, color) {
 export async function tintedMockup(type, side, color) {
   const key = [type, side, color].join(":");
   if (tints.has(key)) return tints.get(key);
-  const image = await loadMockup(type);
+  const isObject = ["cap", "mug"].includes(type);
+  const image = isObject ? null : await loadMockup(type);
   const canvas = document.createElement("canvas");
   canvas.width = 600;
   canvas.height = 650;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   const g = mockupGeometry;
-  ctx.drawImage(image, side === "back" ? image.width / 2 : 0, 0, image.width / 2, image.height, g.x, g.y, g.width, g.height);
+  if (isObject) manufactureMockup(ctx, type, side);
+  else ctx.drawImage(image, side === "back" ? image.width / 2 : 0, 0, image.width / 2, image.height, g.x, g.y, g.width, g.height);
   const pixels = ctx.getImageData(0, 0, 600, 650);
   tintPixels(pixels.data, color);
   ctx.putImageData(pixels, 0, 0);
@@ -95,6 +98,7 @@ function loadThumbnail(type) {
 export async function tintedThumbnail(type, color) {
   const key = type + ":" + color;
   if (thumbnailTints.has(key)) return thumbnailTints.get(key);
+  if (["cap", "mug"].includes(type)) return tintedMockup(type, "front", color);
   const image = await loadThumbnail(type);
   const canvas = document.createElement("canvas");
   canvas.width = 240;

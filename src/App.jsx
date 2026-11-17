@@ -22,7 +22,7 @@ import WsOrders from "./pages/workspace/Orders.jsx";
 import WsOrderDetail from "./pages/workspace/OrderDetail.jsx";
 import WsProducts from "./pages/workspace/Products.jsx";
 import WsTemplates from "./pages/workspace/Templates.jsx";
-import WsSettings from "./pages/workspace/Settings.jsx";
+import WsSettings, { ProductPricing } from "./pages/workspace/Settings.jsx";
 import WsImport from "./pages/workspace/Import.jsx";
 import WsClients from "./pages/workspace/Clients.jsx";
 import WsReports from "./pages/workspace/Reports.jsx";
@@ -132,14 +132,14 @@ function Header() {
             {user && <Link to="/account/security" className="small">{t("account_security")}</Link>}
             {user && (
               <button
-                className="btn icon"
+                className="btn secondary logout-button"
                 onClick={async () => {
-                  if(await logout())go("/");
+                  if (await logout()) {setMenuOpen(false); go("/");}
                 }}
                 aria-label={t("nav_logout")}
                 title={t("nav_logout")}
               >
-                ⎋
+                <span aria-hidden="true">↪</span> {t("nav_logout")}
               </button>
             )}
           </div>
@@ -197,8 +197,29 @@ function ImpersonationBanner() {
   );
 }
 
+function homeForRole(role) {
+  return role === "company_owner" ? "/workspace/orders" : role === "admin" ? "/admin/workshops" : "/my-orders";
+}
+
+function RoleRedirect({destination}) {
+  const { navigate } = useRoute();
+  const { connectionError } = useAuth();
+  useEffect(() => { if (!connectionError) navigate(destination, {replace:true}); }, [connectionError, destination, navigate]);
+  return null;
+}
+
 function Routes() {
   const { path } = useRoute();
+  const { user, loading } = useAuth();
+  const adminPage = path === "/admin" || path.startsWith("/admin/");
+  const workshopPage = path === "/workspace" || path.startsWith("/workspace/");
+  const customerPage = path === "/my-orders" || path.startsWith("/orders/");
+  const newOrder = path.startsWith("/order/");
+  if (loading && (adminPage || workshopPage || customerPage || newOrder)) return null;
+  const allowed = adminPage ? "admin" : workshopPage ? "company_owner" : "customer";
+  if ((adminPage || workshopPage || customerPage || (newOrder && user)) && user?.role !== allowed) {
+    return <RoleRedirect destination={user ? homeForRole(user.role) : adminPage ? "/admin-login" : "/login"} />;
+  }
 
   if (path === "/") return <Home />;
   if (path === "/login") return <Login />;
@@ -229,6 +250,7 @@ function Routes() {
   const wsOrderMatch = matchRoute("/workspace/orders/:number", path);
   if (wsOrderMatch) return <WsOrderDetail number={wsOrderMatch.number} />;
   if (path === "/workspace/products") return <WsProducts />;
+  if (path === "/workspace/products/pricing") return <ProductPricing />;
   if (path === "/workspace/templates") return <WsTemplates />;
   if (path === "/workspace/clients") return <WsClients />;
   if (path === "/workspace/reports") return <WsReports />;
@@ -240,7 +262,6 @@ function Routes() {
   if (path === "/admin" || path === "/admin/workshops") return <AdminWorkshops />;
   if (path === "/admin/payments") return <AdminPayments />;
   if (path === "/admin/audit-log") return <AdminAuditLog />;
-  if (path.startsWith("/admin")) return <ComingSoon titleKey="nav_admin" />;
   if (path.startsWith("/admin")) return <ComingSoon titleKey="nav_admin" />;
   return <ComingSoon titleKey="nav_directory" />;
 }

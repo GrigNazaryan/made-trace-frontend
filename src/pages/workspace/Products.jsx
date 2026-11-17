@@ -1,3 +1,5 @@
+import { Link } from "../../router/HashRouter.jsx";
+import { printSurface } from "../../lib/printAreas.js";
 import ProductPreview from "../../components/ProductPreview.jsx";
 import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useState } from "react";
@@ -8,13 +10,13 @@ import WorkspaceLayout from "./WorkspaceLayout.jsx";
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
 const STANDARD_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "One size"];
-const MOCKUP_TYPES = ["tee", "hoodie", "tank", "tote", "reference"];
+const MOCKUP_TYPES = ["tee", "hoodie", "tank", "tote", "cap", "mug", "reference"];
 
 function emptyForm() {
   return {
     name: "", description: "", category: "Apparel", base: 0, acquisitionCost: "", published: false,
     colors: "#ffffff, #0d1b2a", sizes: "S, M, L, XL", mockupType: "tee", image: null,
-    paymentMode: "full", paymentPercent: 50, sizeAdjustments: {},
+    paymentMode: "full", paymentPercent: 50, sizeAdjustments: {}, printAreas: {_preset:{version:2}},
   };
 }
 
@@ -24,7 +26,7 @@ function toFormValues(p) {
     acquisitionCost: p.acquisitionCost ?? "", published: p.published,
     colors: (p.colors || []).join(", "), sizes: (p.sizes || []).join(", "), mockupType: p.mockupType,
     image: p.image || null,
-    paymentMode: p.paymentMode || "full", paymentPercent: p.paymentPercent || 50, sizeAdjustments: p.sizeAdjustments || {},
+    paymentMode: p.paymentMode || "full", paymentPercent: p.paymentPercent || 50, sizeAdjustments: p.sizeAdjustments || {}, printAreas: p.printAreas || {},
   };
 }
 
@@ -89,6 +91,7 @@ function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
       acquisitionCost: form.acquisitionCost === "" ? null : Number(form.acquisitionCost),
       published: form.published, colors, sizes: selectedSizes,
       ...(form.sizeAdjustments !== baseline.sizeAdjustments ? { sizeAdjustments: form.sizeAdjustments } : {}),
+      printAreas: form.printAreas,
       mockupType: form.mockupType, image: form.image || null,
       paymentMode: form.paymentMode, paymentPercent: Number(form.paymentPercent) || 50,
     });
@@ -112,9 +115,14 @@ function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
         </label>
         <label className="field">
           <span className="field-label">{t("ws_product_mockup")}</span>
-          <select className="control" value={form.mockupType} onChange={(e) => set("mockupType", e.target.value)}>
+          <select className="control" value={form.mockupType} onChange={event => {
+            const type = event.target.value;
+            setForm(current => ({...current, mockupType:type, printAreas: {_preset:{version:2}},
+              sizes: ["cap","mug"].includes(type) ? "One size" : current.sizes,
+              category: type === "mug" ? "Drinkware" : type === "cap" ? "Headwear" : current.category}));
+          }}>
             {MOCKUP_TYPES.map((m) => (
-              <option key={m} value={m}>{m}</option>
+              <option key={m} value={m}>{t("mockup_" + m)}</option>
             ))}
           </select>
         </label>
@@ -163,6 +171,26 @@ function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
           </label>
         ))}
       </fieldset>
+      {form.mockupType !== "reference" && <details>
+        <summary>{t("product_print_area")}</summary>
+        <p className="small">{t("product_print_area_note")}</p>
+        {!form.printAreas._preset && ["tee","hoodie"].includes(form.mockupType) &&
+          <label className="check-row"><input type="checkbox" checked={false} onChange={() =>
+            set("printAreas", {...form.printAreas,_preset:{version:2}})} />{t("product_print_area_wider")}</label>}
+        <div className="form-cols">{["front","back"].flatMap(side => ["widthCm","heightCm"].map(key => {
+          const fallback = printSurface(form.mockupType, side, form.printAreas)[key];
+          return <label className="field" key={side + key}>
+            <span className="field-label">{t(form.mockupType === "mug" ? side === "front" ? "mug_left" : "mug_right" : "editor_" + side)} · {t(key === "widthCm" ? "editor_width" : "editor_height")} (cm)</span>
+            <input className="control" type="number" min={2} max={100} step={0.1} placeholder={String(fallback)}
+              value={form.printAreas[side]?.[key] ?? ""} onChange={event => {
+                const value = event.target.value === "" ? null : Number(event.target.value);
+                const next = {...form.printAreas[side]};
+                if (value === null) delete next[key]; else next[key] = value;
+                set("printAreas", {...form.printAreas,[side]:next});
+              }} />
+          </label>;
+        }))}</div>
+      </details>}
       <details>
         <summary>{t("catalog_advanced_variants")}</summary>
         <label className="field">
@@ -407,6 +435,7 @@ export default function Products() {
     <WorkspaceLayout section="products">
       <div className="between" style={{ marginBottom: 20 }}>
         <h2>{t("ws_products_title")}</h2>
+        {!editingId && <Link className="btn secondary" to="/workspace/products/pricing">{t("ws_settings_pricing")}</Link>}
         {editingId === null && (
           <button className="btn primary" onClick={() => { setEditingId("new"); setFormError(null); }}>
             {t("ws_products_new")}
