@@ -20,6 +20,8 @@ export default function MyOrders() {
   const { user, loading: authLoading, connectionError } = useAuth();
   const { navigate } = useRoute();
   const [orders, setOrders] = useState(null);
+  const [drafts, setDrafts] = useState([]);
+  const [draftLoadError, setDraftLoadError] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
 
@@ -31,6 +33,10 @@ export default function MyOrders() {
     }
     let cancelled = false;
     setOrders(null);
+    setDrafts([]);
+    setDraftLoadError(false);
+    api.continuations().then(items => {if (!cancelled) setDrafts(items);})
+      .catch(() => {if (!cancelled) setDraftLoadError(true);});
     setError(null);
     collectOrderPages(api.myOrders, {}, () => !cancelled)
       .then((rows) => !cancelled && setOrders(rows))
@@ -67,6 +73,14 @@ export default function MyOrders() {
         </div>
       )}
 
+      {draftLoadError && <p className="small" role="status">{t("draft_list_failed")}</p>}
+      {drafts.length > 0 && <section className="card pad stack draft-list">
+        <h3>{t("draft_list")}</h3>
+        {drafts.map(draft => <Link key={draft.workshopId} to={"/order/" + draft.workshopId} className="activity-link row between wrap">
+          <span><strong>{draft.workshopName}</strong> · {t("design_group_total", {count:draft.units})}</span>
+          <span>{t("draft_continue")} →</span>
+        </Link>)}
+      </section>}
       {orders === null && !error && <p className="small">{t("common_loading")}</p>}
 
       {orders !== null && (

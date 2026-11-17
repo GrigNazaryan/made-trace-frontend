@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../../lib/unsavedChanges.js";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
 import { api } from "../../lib/api.js";
@@ -12,6 +13,9 @@ export default function Templates() {
   const [error, setError] = useState(null);
   const [form, setForm] = useState(null);
   const [busy, setBusy] = useState(false);
+  const original = form?.id ? templates?.find(template => template.id === form.id) : blank();
+  const dirty = Boolean(form && JSON.stringify(form) !== JSON.stringify(original));
+  useUnsavedChanges(dirty, t);
 
   function load() {
     return api.listTemplates().then(setTemplates).catch(err => setError(errorText(t, err.code)));
@@ -62,7 +66,7 @@ export default function Templates() {
       <p className="small">{t("template_text_only")}</p>
       <div className="row wrap">
         <button className="btn primary" type="submit" disabled={busy}>{t("common_save")}</button>
-        <button className="btn secondary" type="button" onClick={() => setForm(null)}>{t("common_cancel")}</button>
+        <button className="btn secondary" type="button" onClick={() => {if (!dirty || window.confirm(t("confirm_unsaved_product"))) setForm(null);}}>{t("common_cancel")}</button>
       </div>
     </form> : templates === null ? <p>{t("common_loading")}</p> : templates.length === 0
       ? <p>{t("ws_templates_empty")}</p>

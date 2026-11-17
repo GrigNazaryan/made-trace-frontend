@@ -19,6 +19,7 @@ function due(order) {
 export default function Overview() {
   const { t, formatDate } = useI18n();
   const [orders, setOrders] = useState(null);
+  const [filter, setFilter] = useState("all");
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -31,7 +32,14 @@ export default function Overview() {
   }, []);
 
   const open = (orders || []).filter(order => !CLOSED.includes(order.status));
-  const queue = [...open].sort((a, b) =>
+  const now = new Date();
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0,10);
+  const categories = {
+    overdue: open.filter(order => due(order) && due(order) < today),
+    approval: open.filter(order => ["quoted", "proof", "clarification"].includes(order.status)),
+    unread: open.filter(order => order.unread),
+  };
+  const queue = [...(categories[filter] || open)].sort((a, b) =>
     Number(Boolean(b.unread)) - Number(Boolean(a.unread))
     || (due(a) || "9999").localeCompare(due(b) || "9999")
   );
@@ -47,6 +55,12 @@ export default function Overview() {
         <div className="between">
           <h3>{t("action_queue")}</h3>
           <Link to="/workspace/calendar" className="btn secondary small">{t("calendar_title")}</Link>
+        </div>
+        <div className="row wrap overview-filters" role="group" aria-label={t("action_queue")}>
+          {[["all", "myorders_filter_all", open], ["overdue","dashboard_overdue",categories.overdue],
+            ["approval","dashboard_approval",categories.approval], ["unread","dashboard_unread",categories.unread]]
+            .map(([key,label,items]) => <button key={key} type="button" className="btn secondary small"
+              aria-pressed={filter === key} onClick={() => setFilter(key)}>{t(label)} · {items.length}</button>)}
         </div>
         {!queue.length && <p className="small">{t("ws_orders_empty")}</p>}
         {queue.slice(0, 12).map(order => (

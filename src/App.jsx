@@ -1,6 +1,7 @@
 import WsCalendar from "./pages/workspace/Calendar.jsx";
 import AccountSecurity, { PasswordRecovery, OAuthReturn } from "./pages/AccountSecurity.jsx";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useI18n, languageNames, dictionaries } from "./lib/i18n/index.jsx";
 import { useAuth } from "./lib/AuthContext.jsx";
 import { Link, useRoute, matchRoute } from "./router/HashRouter.jsx";
@@ -64,6 +65,43 @@ function Header() {
   const { user, logout, connectionError, refresh } = useAuth();
   const { path, navigate } = useRoute();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef(null);
+  const menuPanel = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const width = window.matchMedia("(max-width: 1180px)");
+    const dismiss = () => {
+      setMenuOpen(false);
+      menuButton.current?.focus();
+    };
+    const onResize = () => { if (!width.matches) setMenuOpen(false); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    menuPanel.current?.querySelector("a")?.focus();
+    function onKey(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        dismiss();
+      }
+      if (event.key === "Tab") {
+        const controls = [menuButton.current, ...menuPanel.current.querySelectorAll("a[href], button:not([disabled]), select")];
+        const first = controls[0], last = controls.at(-1);
+        if ((event.shiftKey && document.activeElement === first)
+          || (!event.shiftKey && document.activeElement === last)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+        }
+      }
+    }
+    width.addEventListener("change", onResize);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      width.removeEventListener("change", onResize);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -75,22 +113,27 @@ function Header() {
   }
 
   return (
-    <header className="topbar">
+    <header className={"topbar" + (menuOpen ? " menu-open" : "")}>
       {connectionError && <div className="notice" role="alert"><button className="btn secondary small" onClick={refresh}>{t("account_retry")}</button></div>}
       <div className="topbar-inner">
         <Link to="/" className="brand">
+          <img className="brand-mark" src="/favicon.svg" width="30" height="30" alt="" />
           MadeTrace
         </Link>
         <button
           type="button"
+          ref={menuButton}
           className="btn icon mobile-menu"
+          aria-controls="header-menu"
           aria-label={t("nav_menu")}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((o) => !o)}
         >
           {menuOpen ? "✕" : "☰"}
         </button>
-        <div className={`topbar-collapse${menuOpen ? " open" : ""}`}>
+        {menuOpen && createPortal(<div className="menu-backdrop" aria-hidden="true"
+          onClick={() => { setMenuOpen(false); menuButton.current?.focus(); }} />, document.body)}
+        <div id="header-menu" ref={menuPanel} className={"topbar-collapse" + (menuOpen ? " open" : "")}>
           <nav className="mainnav" aria-label="Main navigation">
             <Link to="/directory" className={path === "/directory" ? "active" : ""} onClick={() => setMenuOpen(false)}>
               {t("nav_directory")}

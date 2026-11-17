@@ -16,7 +16,10 @@ export default function ProductPreview({ product, color }) {
     tintedThumbnail(type, color).then(image => {
       if (!current) return;
       context.clearRect(0, 0, 240, 260);
-      context.drawImage(image, 0, 0);
+      const scale = Math.min(target.width / image.width, target.height / image.height);
+      const w = image.width * scale;
+      const h = image.height * scale;
+      context.drawImage(image, (target.width - w) / 2, (target.height - h) / 2, w, h);
     }).catch(() => {
       const fallback = new Image();
       fallback.onload = () => { if (current) context.drawImage(fallback, 0, 0, 240, 260); };

@@ -11,13 +11,18 @@ function ProgressTracker({ order, t }) {
   const { progress } = order;
   return (
     <div className="progress-tracker">
-      <div className="row wrap" style={{ gap: 6 }}>
-        {STAGES.map((key, i) => (
-          <span key={key} className={`chip ${i <= progress.stage ? "blue" : ""}`}>
-            {t(key)}
-          </span>
-        ))}
-      </div>
+      <ol className="order-journey" aria-label={t("order_journey")}>
+        {STAGES.map((key, index) => {
+          const done = index < progress.stage || progress.complete;
+          const current = index === progress.stage && !progress.complete;
+          return <li key={key} className={done ? "complete" : current ? "current" : ""}
+            aria-current={current ? "step" : undefined}>
+            <span className="journey-dot" aria-hidden="true">{done ? "✓" : index + 1}</span>
+            <strong>{t(key)}</strong>
+            <small>{t(done ? "journey_done" : current ? "journey_current" : "journey_next")}</small>
+          </li>;
+        })}
+      </ol>
       {progress.exception && (
         <div className="notice" style={{ marginTop: 10 }}>
           {progress.exception === "revision"
@@ -140,6 +145,8 @@ export default function OrderPortal({ number }) {
   const [order, setOrder] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [revision, setRevision] = useState(null);
+  const [reason, setReason] = useState("");
   const loadedForRef = useRef(null);
 
   async function load() {
@@ -156,6 +163,7 @@ export default function OrderPortal({ number }) {
   useEffect(() => {
     setOrder(null);
     setError(null);
+    setRevision(null);
     loadedForRef.current = number;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -163,19 +171,28 @@ export default function OrderPortal({ number }) {
 
   async function withBusy(fn) {
     setBusy(true);
+    setError(null);
     try {
       const data = await fn();
       setOrder(data);
+      return true;
     } catch (err) {
       setError(errorText(t, err.code));
+      return false;
     } finally {
       setBusy(false);
     }
   }
 
-  const onQuoteDecision = (version, decision) => withBusy(() => api.decideQuote(number, version, decision));
+  function openRevision(kind, version) {
+    setReason("");
+    setRevision({kind, version});
+  }
+  const onQuoteDecision = (version, decision) => decision === "revision"
+    ? openRevision("quote", version)
+    : withBusy(() => api.decideQuote(number, version, decision));
   const onProofApprove = (version) => withBusy(() => api.approveProof(number, version));
-  const onProofRevise = (version) => withBusy(() => api.reviseProof(number, version));
+  const onProofRevise = version => openRevision("proof", version);
   const onSendMessage = (text) => withBusy(() => api.sendMessage(number, text));
   const onRepeat = () =>
     withBusy(async () => {
@@ -184,7 +201,7 @@ export default function OrderPortal({ number }) {
       return fresh;
     });
 
-  if (error) {
+  if (error && !order) {
     return (
       <div className="page narrow">
         <div className="empty">
@@ -239,6 +256,10 @@ export default function OrderPortal({ number }) {
         </div>
       )}
       <ProgressTracker order={order} t={t} />
+      {order.schedule?.promisedDate && <p className="order-promised-date">
+        <strong>{t("ws_order_schedule_promised")}</strong> · <time dateTime={order.schedule.promisedDate}>{order.schedule.promisedDate}</time>
+      </p>}
+      {error && <p className="notice" role="alert">{error}</p>}
 
       {payment.message && <p className="notice order-payment" role="status">{t(payment.message)}</p>}
       {payment.url && (
@@ -277,6 +298,22 @@ export default function OrderPortal({ number }) {
         <QuoteCard order={order} t={t} formatMoney={formatMoney} onDecision={onQuoteDecision} busy={busy} />
         <ProofCard order={order} t={t} onApprove={onProofApprove} onRevise={onProofRevise} busy={busy} />
       </div>
+      {revision && <form className="card pad stack" onSubmit={async event => {
+        event.preventDefault();
+        if (!reason.trim()) return;
+        const sent = await withBusy(() => revision.kind === "quote"
+          ? api.decideQuote(number, revision.version, "revision", reason.trim())
+          : api.reviseProof(number, revision.version, reason.trim()));
+        if (sent) setRevision(null);
+      }}>
+        <label className="field"><strong>{t("revision_reason")}</strong>
+          <textarea className="control" autoFocus required maxLength={2000} value={reason} onChange={event => setReason(event.target.value)} />
+        </label>
+        <div className="row wrap">
+          <button type="submit" className="btn primary" disabled={busy || !reason.trim()}>{t("revision_send")}</button>
+          <button type="button" className="btn secondary" disabled={busy} onClick={() => setRevision(null)}>{t("common_cancel")}</button>
+        </div>
+      </form>}
 
 
       <div style={{ marginTop: 18 }}>

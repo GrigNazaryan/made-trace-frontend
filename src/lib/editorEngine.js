@@ -249,6 +249,7 @@ export function createEditor(
     ctx.restore();
   }
   function select(id) {
+    if (selected !== id) lastTap = null;
     selected = id;
     draw();
     onSelection(getSelected());
@@ -371,6 +372,7 @@ export function createEditor(
     if (next !== "front" && next !== "back") return;
     side = next;
     selected = null;
+    lastTap = null;
     refreshGarment();
     draw();
     notify();
@@ -404,8 +406,9 @@ export function createEditor(
     return { x: dx * Math.cos(rad) - dy * Math.sin(rad), y: dx * Math.sin(rad) + dy * Math.cos(rad) };
   }
   function hit(p) {
-    for (let i = layers().length - 1; i >= 0; i--) {
-      const l = layers()[i];
+    const ordered = [...layers()].reverse();
+    const active = ordered.find(layer => layer.id === selected && layer.visible !== false);
+    for (const [index, l] of (active ? [active, ...ordered] : ordered).entries()) {
       if (l.visible === false) continue;
       const d = local(l, p);
       const { w, h } = size(l);
@@ -414,7 +417,9 @@ export function createEditor(
       const rot = Math.hypot(d.x, d.y + h / 2 + 27);
       if (l.id === selected && rot < 15) return { id: l.id, mode: "rotate" };
       if (l.id === selected && handle) return { id: l.id, mode: "resize", handle };
-      if (Math.abs(d.x) <= w / 2 + 5 && Math.abs(d.y) <= h / 2 + 5) return { id: l.id, mode: "move" };
+      if (!active || index > 0) {
+        if (Math.abs(d.x) <= w / 2 + 5 && Math.abs(d.y) <= h / 2 + 5) return { id: l.id, mode: "move" };
+      }
     }
     return null;
   }
@@ -422,9 +427,9 @@ export function createEditor(
     if (e.button !== 0 || !e.isPrimary || drag || e.target.closest?.(".editor-inline-text")) return;
     const p = coords(e);
     const found = hit(p);
-    select(found?.id || null);
-    tap = found ? { id: found.id, start: p, pointer: e.pointerId } : null;
+    tap = { id: found?.id ?? null, x: e.clientX, y: e.clientY, pointer: e.pointerId };
     if (!found || (e.pointerType === "touch" && !e.target.closest?.(".editor-touch-zone"))) return;
+    select(found.id);
     drag = { ...found, start: p, pointer: e.pointerId,
       original: clone(layers().find(l => l.id === found.id)), moved: false };
     e.target.setPointerCapture?.(e.pointerId);
@@ -432,7 +437,10 @@ export function createEditor(
 
   function pointerMove(e) {
     const p = coords(e);
-    if (tap?.pointer === e.pointerId && Math.hypot(p.x - tap.start.x, p.y - tap.start.y) > 8) tap = null;
+    if (tap?.pointer === e.pointerId && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) {
+      tap = null;
+      lastTap = null;
+    }
     if (drag?.pointer !== e.pointerId) return;
     const l = layers().find(item => item.id === drag.id);
     if (!l) return;
@@ -474,19 +482,33 @@ export function createEditor(
         Object.assign(layers().find(item => item.id === drag.id) || {}, drag.original);
         draw();
         onSelection(getSelected());
-      } else if (drag.moved) snapshot();
+      } else if (drag.moved) {
+        tap = null;
+        lastTap = null;
+        snapshot();
+      }
       drag = null;
     }
-    if (tap?.pointer !== e.pointerId) return;
-    if (e.type !== "pointercancel") {
-      const now = performance.now();
-      if (lastTap?.id === tap.id && now - lastTap.at < 360 &&
-          Math.hypot(lastTap.point.x - tap.start.x, lastTap.point.y - tap.start.y) < 24) {
-        onActivate(getSelected());
-        lastTap = null;
-      } else lastTap = { id: tap.id, at: now, point: tap.start };
+    if (e.type === "pointercancel") {
+      tap = null;
+      lastTap = null;
+      return;
     }
+    if (tap?.pointer !== e.pointerId) return;
+    const current = tap;
     tap = null;
+    if (!current.id) {
+      select(null);
+      lastTap = null;
+      return;
+    }
+    select(current.id);
+    const now = performance.now();
+    if (lastTap?.id === current.id && now - lastTap.at < 360 &&
+        Math.hypot(lastTap.x - current.x, lastTap.y - current.y) < 20) {
+      onActivate(getSelected());
+      lastTap = null;
+    } else lastTap = { ...current, at: now };
   }
 
   const events = { pointerdown: down, pointermove: pointerMove, pointerup: up, pointercancel: up };

@@ -27,6 +27,10 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   const imageToolsRef = useRef(null);
   const [inline, setInline] = useState(false);
   const [fontMenu, setFontMenu] = useState(false);
+  const [tool, setTool] = useState("layers");
+  const [fontQuery, setFontQuery] = useState("");
+  const selectionId = useRef(null);
+  const queuedUpload = useRef(false);
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const replaceInput = useRef(false);
@@ -67,12 +71,21 @@ export default function DesignEditor({ product, color, value, onChange, workshop
       product,
       onChange: (state) => onChange(state),
       interactionTarget: stageRef.current,
-      onSelection: (layer) => setSelected(layer),
+      onSelection: (layer) => {
+        if (selectionId.current !== (layer?.id ?? null)) {
+          selectionId.current = layer?.id ?? null;
+          setInline(false);
+          setFontMenu(false);
+          setFontQuery("");
+          setTool(layer?.type === "text" ? "text" : layer ? "transform" : "layers");
+        }
+        setSelected(layer);
+      },
       onActivate: layer => {
         if (layer?.type === "text") setInline(true);
         if (layer?.type === "image") imageToolsRef.current?.focus({ preventScroll: false });
       },
-      onImageError: () => setUploadError(t("artwork_preview_failed")),
+      onImageError: () => setUploadError({ message: t("artwork_preview_failed"), preview: true }),
       uploadImage: saveArtwork,
       resolveImage,
     });
@@ -109,20 +122,26 @@ export default function DesignEditor({ product, color, value, onChange, workshop
     editorRef.current?.changeSide(next);
   }
 
-  async function onPickFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !editorRef.current) return;
+  async function uploadFile(file, replace = false) {
+    if (!file || !editorRef.current || queuedUpload.current) return;
+    queuedUpload.current = true;
     setUploadError(null);
     setUploading(true);
     try {
-      await editorRef.current.addImageFile(file, { replace: replaceInput.current });
+      await editorRef.current.addImageFile(file, { replace });
     } catch (err) {
       const message = err.code ? errorText(t, err.code) : t(err.message);
-      setUploadError(message === (err.code || err.message) ? t("artwork_upload_failed") : message);
+      setUploadError({ message: message === (err.code || err.message) ? t("artwork_upload_failed") : message });
     } finally {
+      queuedUpload.current = false;
       setUploading(false);
     }
+  }
+
+  function onPickFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    uploadFile(file, replaceInput.current);
   }
 
   function patch(props) {
@@ -130,6 +149,9 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   }
 
   const editor = editorRef.current;
+  const layers = editor?.allLayers() || [];
+  const tools = selected?.type === "text" ? ["text", "transform", "layers"] :
+    selected ? ["transform", "layers"] : ["layers"];
 
   return (
     <div className="design-editor" onKeyDown={event => {
@@ -167,8 +189,12 @@ export default function DesignEditor({ product, color, value, onChange, workshop
             <button className="btn secondary block" type="button" onClick={() => editor?.addText()}>
               {t("editor_add_text")}
             </button>
-            {allowUpload && <button className="btn secondary block" type="button" onClick={() => { replaceInput.current = false; fileInputRef.current?.click(); }} disabled={uploading}>
-              {uploading ? t("common_loading") : t("editor_upload")}
+            {allowUpload && <button className="btn secondary block artwork-drop" type="button"
+              onDragOver={event => event.preventDefault()}
+              onDrop={event => { event.preventDefault(); uploadFile(event.dataTransfer.files[0]); }}
+              onClick={() => { replaceInput.current = false; fileInputRef.current?.click(); }} disabled={uploading}>
+              {uploading ? t("artwork_uploading") : t("editor_upload")}
+              {!uploading && <small>{t("artwork_drop_help")}</small>}
             </button>}
             {templates.length > 0 && <label className="field"><span>{t("editor_template")}</span>
               <select className="control" value="" onChange={event => {
@@ -181,9 +207,9 @@ export default function DesignEditor({ product, color, value, onChange, workshop
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" hidden onChange={onPickFile} />
           </div>
           {uploadError && (
-            <p className="small" style={{ color: "#c44b57", marginTop: 8 }}>
-              {uploadError}
-              <button type="button" className="btn secondary small" onClick={() => {setUploadError(null); editor?.retryImages();}}>{t("account_retry")}</button>
+            <p className="small" role="alert" style={{ color: "#c44b57", marginTop: 8 }}>
+              {uploadError.message}
+              {uploadError.preview && <button type="button" className="btn secondary small" onClick={() => { setUploadError(null); editor?.retryImages(); }}>{t("account_retry")}</button>}
             </p>
           )}
           <p className="instruction" style={{ marginTop: 16 }}>
@@ -226,7 +252,11 @@ export default function DesignEditor({ product, color, value, onChange, workshop
           </div>
         </section>
 
-        <aside className={"card editor-panel editor-properties" + (selected ? " has-selection" : "")}>
+        <aside className="card editor-panel editor-properties" data-editor-tool={tool}>
+          <div className="editor-tool-tabs row wrap" role="group" aria-label={t("editor_tools")}>
+            {tools.map(name => <button key={name} type="button" className="btn secondary small"
+              aria-pressed={tool === name} onClick={() => setTool(name)}>{t("editor_tool_" + name)}</button>)}
+          </div>
           <span className="eyebrow">{t("editor_selected")}</span>
           {!selected && (
             <p className="small" style={{ marginTop: 11 }}>
@@ -234,7 +264,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
             </p>
           )}
           {selected?.type === "text" && (
-            <div className="stack" style={{ marginTop: 11 }}>
+            <div className="stack editor-text-tools" style={{ marginTop: 11 }}>
               <label className="field">
                 <span className="field-label">{t("editor_text")}</span>
                 <input
@@ -249,7 +279,9 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                 <button type="button" className="btn secondary small" aria-expanded={fontMenu} aria-label={t("editor_font") + ": " + selected.font}
                   onClick={() => setFontMenu(!fontMenu)} style={{fontFamily: fontStack(selected.font)}}>{selected.font}</button>
                 {fontMenu && <div className="editor-font-list">
-                  {designFonts.map(([name, stack]) => (
+                  <input type="search" className="control" aria-label={t("editor_font_search")} placeholder={t("editor_font_search")}
+                    value={fontQuery} onChange={event => setFontQuery(event.target.value)} />
+                  {designFonts.filter(([name]) => name.toLowerCase().includes(fontQuery.trim().toLowerCase())).map(([name, stack]) => (
                     <button type="button" key={name} className="btn secondary small" aria-pressed={selected.font === name}
                       onClick={() => { patch({ font: name }); setFontMenu(false); }}
                       style={{fontFamily: stack}}>{name} · Aa Аа</button>
@@ -285,7 +317,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
             </div>
           )}
           {selected?.type === "image" && (
-            <div className="stack" style={{ marginTop: 11 }}>
+            <div className="stack editor-transform-tools" style={{ marginTop: 11 }}>
               {preview && <img
                 src={preview}
                 alt=""
@@ -297,7 +329,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
             </div>
           )}
           {selected && (
-            <div className="stack" style={{ marginTop: 16 }}>
+            <div className="stack editor-transform-tools" style={{ marginTop: 16 }}>
               <div className="form-cols">
                 {["width", "height"].map(key => <label key={key} className="field">
                   <span className="field-label">{t("editor_" + key)} (cm)</span>
@@ -333,6 +365,22 @@ export default function DesignEditor({ product, color, value, onChange, workshop
               </div>
             </div>
           )}
+          <section className="editor-layer-tools stack">
+            <strong>{t("editor_tool_layers")}</strong>
+            {layers.length === 0 && <p className="small">{t("editor_no_layers")}</p>}
+            {[...layers].reverse().map((layer, index) => (
+              <button key={layer.id} type="button" className="btn secondary small layer-choice"
+                aria-pressed={selected?.id === layer.id} onClick={() => {editor.select(layer.id); setTool("layers");}}>
+                {layer.type === "text" ? layer.text || t("editor_text") : t("editor_image_layer", {index:index + 1})}
+              </button>
+            ))}
+            {selected && <div className="row wrap">
+              <button type="button" className="btn secondary small" disabled={layers.at(-1)?.id === selected.id}
+                onClick={() => editor.move(1)}>{t("editor_layer_forward")}</button>
+              <button type="button" className="btn secondary small" disabled={layers[0]?.id === selected.id}
+                onClick={() => editor.move(-1)}>{t("editor_layer_backward")}</button>
+            </div>}
+          </section>
         </aside>
       </div>
     </div>

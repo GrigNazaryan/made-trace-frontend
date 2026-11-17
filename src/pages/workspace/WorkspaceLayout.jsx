@@ -32,6 +32,17 @@ export default function WorkspaceLayout({ section, children }) {
 
   return (
     <div className="workspace">
+      <div className="workspace-section-picker">
+        <label className="field">
+          <span>{t("ws_your_workspace")}</span>
+          <select className="control" value={section} onChange={event => {
+            navigate("/workspace/" + event.target.value);
+            event.target.value = section;
+          }}>
+            {NAV.map(([slug,label]) => <option key={slug} value={slug}>{t(label)}</option>)}
+          </select>
+        </label>
+      </div>
       <aside className="workspace-side">
         <div className="side-section" style={{ marginTop: 0 }}>
           {t("ws_your_workspace")}

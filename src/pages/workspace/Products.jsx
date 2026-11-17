@@ -1,8 +1,9 @@
+import { useAuth } from "../../lib/AuthContext.jsx";
 import { Link } from "../../router/HashRouter.jsx";
 import { printSurface } from "../../lib/printAreas.js";
 import ProductPreview from "../../components/ProductPreview.jsx";
 import NumberInput from "../../components/NumberInput.jsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
 import { api } from "../../lib/api.js";
 import { uploadToStorage } from "../../lib/supabaseClient.js";
@@ -203,7 +204,7 @@ function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
         </label>
       </details>
       <label className="field">
-        <span className="field-label">Image</span>
+        <span className="field-label">{t("product_photo")}</span>
         {form.image && <img src={form.image} alt="" style={{ width: 120, borderRadius: 8, marginBottom: 8 }} />}
         <input className="control" type="file" accept="image/png,image/jpeg,image/webp" onChange={onPickImage} disabled={uploading} />
         {uploading && <span className="small">{t("common_loading")}</span>}
@@ -383,7 +384,9 @@ function BulkPricing({ t, products }) {
 }
 
 export default function Products() {
-  const { t } = useI18n();
+  const { t, formatMoney } = useI18n();
+  const currency = useAuth().user?.workshop?.currency;
+  const editAnchor = useRef(null);
   const [previewColors, setPreviewColors] = useState({});
   const [products, setProducts] = useState(null);
   const [error, setError] = useState(null);
@@ -391,6 +394,12 @@ export default function Products() {
   const [editingId, setEditingId] = useState(null); // null = none, "new" = creating
   const [formError, setFormError] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!editingId) return;
+    editAnchor.current?.scrollIntoView({block:"start"});
+    editAnchor.current?.focus({preventScroll:true});
+  }, [editingId]);
 
   function selectProduct(id) {
     if (id === editingId) return;
@@ -446,7 +455,7 @@ export default function Products() {
       {error && <div className="notice" role="alert">{error}</div>}
 
       {editingId && (
-        <div style={{ marginBottom: 20 }}>
+        <div ref={editAnchor} tabIndex={-1} className="catalog-edit-anchor" style={{ marginBottom: 20 }}>
           <ProductForm
             key={editingId}
             initial={editingId === "new" ? emptyForm() : toFormValues(products.find((p) => p.id === editingId))}
@@ -467,14 +476,15 @@ export default function Products() {
           {products.length === 0 ? (
             <div className="empty"><strong>{t("ws_products_empty")}</strong></div>
           ) : (
-            <div className="products-grid">
+            <div className="products-grid workshop-products">
               {products.map((p) => (
                 <div className="card product-card" key={p.id}>
                   <ProductPreview product={p} color={previewColors[p.id] || p.colors[0]} />
-                  <span className="eyebrow">{p.category}</span>
+                  <span className="eyebrow">{["Apparel","Headwear","Drinkware"].includes(p.category) ? t("category_" + p.category.toLowerCase()) : p.category}</span>
                   <h3>{p.name}</h3>
                   <p className="small">
-                    {p.base} · {p.published ? "Published" : "Draft"}
+                    {t("ws_product_base")} · {currency ? formatMoney(p.base, currency) : p.base}
+                    <span className="chip">{t(p.published ? "template_public" : "template_private")}</span>
                   </p>
                   <div className="row wrap">
                     {p.colors.map((c) => (

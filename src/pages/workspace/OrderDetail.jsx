@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../../lib/unsavedChanges.js";
 import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
@@ -196,12 +197,18 @@ function ScheduleSection({ order, t, onSent }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
+  const [savedState, setSavedState] = useState(() => JSON.stringify(form));
+  useUnsavedChanges(JSON.stringify(form) !== savedState, t);
+
   async function save(e) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
       const updated = await api.updateSchedule(order.id, form);
+      const clean = {...form, comment:""};
+      setForm(clean);
+      setSavedState(JSON.stringify(clean));
       onSent(updated);
     } catch (err) {
       setError(errorText(t, err.code));

@@ -153,6 +153,7 @@ export const api = {
   forgotPassword: (body) => post("/api/auth/forgot-password", body),
   resetPassword: (body) => post("/api/auth/reset-password", body),
   deleteAccount: (body) => post("/api/auth/delete-account", body),
+  continuations: () => get("/api/auth/continuation/list"),
   continuation: (workshopId) => get("/api/auth/continuation", { workshopId }),
   saveContinuation: (body) => put("/api/auth/continuation", body),
   clearContinuation: (params) => del("/api/auth/continuation", params),
@@ -172,9 +173,9 @@ export const api = {
   getOrder: (number) => get(`/api/orders/${number}`),
   markOrderRead: (number) => post(`/api/orders/${number}/read`),
   sendMessage: (number, text) => post(`/api/orders/${number}/messages`, { text }),
-  decideQuote: (number, version, decision) => post(`/api/orders/${number}/quotes/${version}/decision`, { decision }),
+  decideQuote: (number, version, decision, reason = "") => post(`/api/orders/${number}/quotes/${version}/decision`, { decision, reason }),
   approveProof: (number, version) => post(`/api/orders/${number}/proofs/${version}/approve`),
-  reviseProof: (number, version) => post(`/api/orders/${number}/proofs/${version}/revise`),
+  reviseProof: (number, version, reason = "") => post(`/api/orders/${number}/proofs/${version}/revise`, { reason }),
   repeatOrder: (number) => post(`/api/orders/${number}/repeat`),
 
   // --- workspace: company console ------------------------------------------

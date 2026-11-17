@@ -1,3 +1,4 @@
+import { confirmNavigation, useUnsavedChanges } from "../../lib/unsavedChanges.js";
 import { Link } from "../../router/HashRouter.jsx";
 import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useState } from "react";
@@ -23,6 +24,9 @@ function ProfileForm({ workshop, t, onSaved }) {
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
 
+  const [savedState, setSavedState] = useState(() => JSON.stringify(form));
+  useUnsavedChanges(JSON.stringify(form) !== savedState, t);
+
   async function onSubmit(e) {
     e.preventDefault();
     setBusy(true);
@@ -36,6 +40,7 @@ function ProfileForm({ workshop, t, onSaved }) {
       };
       const updated = await api.updateProfile(body);
       setForm(current => ({ ...current, paymentLink: updated.paymentLink || "" }));
+      setSavedState(JSON.stringify({...form, paymentLink: updated.paymentLink || ""}));
       onSaved(updated);
       setSaved(true);
     } catch (err) {
@@ -108,12 +113,18 @@ function PreferencesForm({ workshop, t, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
+  const [savedState, setSavedState] = useState(() => JSON.stringify([timezone, currency]));
+  useUnsavedChanges(JSON.stringify([timezone, currency]) !== savedState, t);
+
   async function onSubmit(e) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
       const updated = await api.updatePreferences({ timezone, currency: currency.toUpperCase() });
+      setTimezone(updated.timezone);
+      setCurrency(updated.currency);
+      setSavedState(JSON.stringify([updated.timezone, updated.currency]));
       onSaved(updated);
     } catch (err) {
       setError(errorText(t, err.code));
@@ -161,6 +172,9 @@ function PricingForm({ workshop, t, onSaved, mockupType }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
+  const [savedState, setSavedState] = useState(() => JSON.stringify([form, inherits]));
+  useUnsavedChanges(JSON.stringify([form, inherits]) !== savedState, t);
+
   async function onSubmit(e) {
     e.preventDefault();
     setBusy(true);
@@ -172,6 +186,7 @@ function PricingForm({ workshop, t, onSaved, mockupType }) {
         else typeRules[mockupType] = form;
       }
       const updated = await api.updatePricing(mockupType ? {...all, typeRules} : {...form, typeRules});
+      setSavedState(JSON.stringify([form, inherits]));
       onSaved(updated);
     } catch (err) {
       setError(errorText(t, err.code));
@@ -307,7 +322,7 @@ export function ProductPricing() {
     <Link to="/workspace/products">{t("ws_nav_products")}</Link>
     <label className="field" style={{margin:"16px 0"}}>
       <span>{t("pricing_applies_to")}</span>
-      <select className="control" value={mockupType} onChange={event => {setMockupType(event.target.value);setSaved(false);}}>
+      <select className="control" value={mockupType} onChange={event => {if (confirmNavigation()) {setMockupType(event.target.value);setSaved(false);} else event.target.value = mockupType;}}>
         <option value="">{t("pricing_default_rule")}</option>
         {["tee","hoodie","cap","mug","tank","tote","reference"].map(type => <option key={type} value={type}>{t("mockup_" + type)}</option>)}
       </select>
