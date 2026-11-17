@@ -1,3 +1,4 @@
+import ClassicIcon from "./ClassicIcon.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { createEditor } from "../lib/editorEngine.js";
@@ -13,19 +14,21 @@ import { designFonts, fontStack } from "../lib/fonts.js";
  * @param {(design:object)=>void} props.onChange
  * @param {string} props.workshopId - workshop that may receive this artwork
  */
-function layerPosition(layer) {
-  return {left: layer.x / 6 + "%", top: layer.y / 6.5 + "%",
-    width: layer.width / 6 + "%", height: layer.height / 6.5 + "%",
+function layerPosition(layer, zoom) {
+  return {left: (300 + (layer.x - 300) * zoom) / 6 + "%", top: (320 + (layer.y - 320) * zoom) / 6.5 + "%",
+    width: layer.width * zoom / 6 + "%", height: layer.height * zoom / 6.5 + "%", "--editor-zoom": zoom,
     transform: "translate(-50%, -50%) rotate(" + (layer.rotation || 0) + "deg)"};
 }
 
-export default function DesignEditor({ product, color, value, onChange, workshopId, orderNumber, prepareUpload, templates = [], allowUpload = true, initialSide = "front", onSideChange }) {
-  const { t } = useI18n();
+export default function DesignEditor({ product, color, value, onChange, workshopId, orderNumber, prepareUpload, templates = [], allowUpload = true, initialSide = "front", onSideChange, onColorChange }) {
+  const { t, language } = useI18n();
   const canvasRef = useRef(null);
   const stageRef = useRef(null);
   const inlineRef = useRef(null);
   const imageToolsRef = useRef(null);
   const [inline, setInline] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [guides, setGuides] = useState(true);
   const [fontMenu, setFontMenu] = useState(false);
   const [tool, setTool] = useState("layers");
   const [fontQuery, setFontQuery] = useState("");
@@ -150,6 +153,12 @@ export default function DesignEditor({ product, color, value, onChange, workshop
 
   const editor = editorRef.current;
   const layers = editor?.allLayers() || [];
+  const surface = editor?.surface();
+  const dimension = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
+  function changeZoom(next) {
+    setZoom(next);
+    editor?.setZoom(next);
+  }
   const tools = selected?.type === "text" ? ["text", "transform", "layers"] :
     selected ? ["transform", "layers"] : ["layers"];
 
@@ -160,11 +169,11 @@ export default function DesignEditor({ product, color, value, onChange, workshop
       if (isEntry && event.key === "Enter" && !event.nativeEvent.isComposing && event.target.tagName === "INPUT") event.preventDefault();
     }}>
       <div className="editor-toolbar">
-        <div className="segmented">
-          <button className={side === "front" ? "active" : ""} onClick={() => changeSide("front")} type="button">
+        <div className="segmented" role="group" aria-label={t("studio_side")}>
+          <button className={side === "front" ? "active" : ""} aria-pressed={side === "front"} onClick={() => changeSide("front")} type="button">
             {t(product?.mockupType === "mug" ? "mug_left" : "editor_front")}
           </button>
-          <button className={side === "back" ? "active" : ""} onClick={() => changeSide("back")} type="button">
+          <button className={side === "back" ? "active" : ""} aria-pressed={side === "back"} onClick={() => changeSide("back")} type="button">
             {t(product?.mockupType === "mug" ? "mug_right" : "editor_back")}
           </button>
         </div>
@@ -181,19 +190,20 @@ export default function DesignEditor({ product, color, value, onChange, workshop
         </div>
       </div>
 
-      <div className="builder">
-        <aside className="card editor-panel">
+      <div className="builder studio-builder">
+        <aside className="card editor-panel studio-insert">
           <span className="eyebrow">{t("editor_elements")}</span>
           <h3 style={{ marginTop: 11 }}>{t("editor_title")}</h3>
           <div className="stack">
             <button className="btn secondary block" type="button" onClick={() => editor?.addText()}>
-              {t("editor_add_text")}
+              <span className="studio-tool-symbol" aria-hidden="true">T</span>{t("editor_add_text")}
             </button>
             {allowUpload && <button className="btn secondary block artwork-drop" type="button"
               onDragOver={event => event.preventDefault()}
               onDrop={event => { event.preventDefault(); uploadFile(event.dataTransfer.files[0]); }}
               onClick={() => { replaceInput.current = false; fileInputRef.current?.click(); }} disabled={uploading}>
-              {uploading ? t("artwork_uploading") : t("editor_upload")}
+              <ClassicIcon name="upload" />
+              <strong>{uploading ? t("artwork_uploading") : t("editor_upload")}</strong>
               {!uploading && <small>{t("artwork_drop_help")}</small>}
             </button>}
             {templates.length > 0 && <label className="field"><span>{t("editor_template")}</span>
@@ -218,7 +228,31 @@ export default function DesignEditor({ product, color, value, onChange, workshop
           </p>
         </aside>
 
-        <section className="card pad editor-canvas-shell">
+        <section className="card editor-studio">
+          <div className="studio-preview-heading between wrap">
+            <div>
+              <strong>{product?.name}</strong>
+              <div className="small">{t("studio_preview")}</div>
+            </div>
+            <div className="studio-zoom" role="group" aria-label={t("studio_zoom")}>
+              <button className="btn secondary small" type="button" aria-label={t("studio_zoom_out")} disabled={zoom <= .75}
+                onClick={() => changeZoom(Math.max(.75, zoom - .25))}>−</button>
+              <button className="btn secondary small" type="button" title={t("studio_zoom_reset")}
+                onClick={() => changeZoom(1)}>{Math.round(zoom * 100)}%</button>
+              <button className="btn secondary small" type="button" aria-label={t("studio_zoom_in")} disabled={zoom >= 1.5}
+                onClick={() => changeZoom(Math.min(1.5, zoom + .25))}>+</button>
+            </div>
+          </div>
+          {onColorChange && product.colors?.length > 1 && <div className="studio-colors">
+            <span className="small">{t("neworder_color")}</span>
+            <div className="row wrap" role="group" aria-label={t("neworder_color")}>
+              {product.colors.map(value => <button key={value} type="button" className="studio-swatch"
+                title={value} aria-label={value} aria-pressed={color === value} onClick={() => onColorChange(value)}>
+                <span style={{ backgroundColor: value }} />
+              </button>)}
+            </div>
+          </div>}
+          <div className="editor-canvas-shell studio-canvas-shell">
           <div className="editor-stage" ref={stageRef}>
             <canvas ref={canvasRef} tabIndex={0} aria-label={t("editor_canvas")}
               onKeyDown={event => {
@@ -230,14 +264,14 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                 patch({ x: selected.x + shift[0] * step, y: selected.y + shift[1] * step });
               }} />
             {selected && !(inline && selected.type === "text") && (
-              <div className="editor-touch-zone" aria-hidden="true" style={layerPosition(selected)}>
+              <div className="editor-touch-zone" aria-hidden="true" style={layerPosition(selected, zoom)}>
                 {[[0,0],[50,0],[100,0],[0,50],[100,50],[0,100],[50,100],[100,100]].map(([x,y]) =>
                   <span key={x + ":" + y} style={{left: x + "%", top: y + "%"}} />)}
-                <span style={{left:"50%",top:"0", marginTop:"calc(-27 * var(--editor-pixel, 0.6px))"}} />
+                <span style={{left:"50%",top:"0", marginTop:"calc(-27 * var(--editor-pixel, 0.6px) * var(--editor-zoom, 1))"}} />
               </div>
             )}
             {inline && selected?.type === "text" && (
-              <textarea ref={inlineRef} className="control editor-inline-text" style={layerPosition(selected)}
+              <textarea ref={inlineRef} className="control editor-inline-text" style={layerPosition(selected, zoom)}
                 aria-label={t("editor_text")} maxLength={80} value={selected.text}
                 onChange={event => patch({ text: event.target.value })}
                 onBlur={() => setInline(false)}
@@ -249,6 +283,15 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                   }
                 }} />
             )}
+          </div>
+          </div>
+          <div className="studio-preview-footer between wrap">
+            <details>
+              <summary>{t("product_print_area")}{surface && " · " + dimension.format(surface.widthCm) + " × " + dimension.format(surface.heightCm) + " cm"}</summary>
+              <p className="small">{t("studio_reference_only")}</p>
+            </details>
+            <button className="btn secondary small" type="button" aria-pressed={guides}
+              onClick={() => { editor?.setGuides(!guides); setGuides(!guides); }}>{t("studio_guides")}</button>
           </div>
         </section>
 

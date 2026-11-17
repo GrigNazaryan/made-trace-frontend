@@ -102,7 +102,7 @@ function ProofSection({ order, t, onSent }) {
           finally { setArtworkBusy(false); }
         }}
       >
-        {artworkBusy ? t("common_loading") : "Download artwork (.zip)"}
+        {artworkBusy ? t("common_loading") : t("studio_download_artwork")}
       </button>
       {artworkError && <div className="notice" role="alert">{artworkError}</div>}
       {error && <div className="notice" role="alert">{error}</div>}
@@ -333,11 +333,17 @@ function MessagesSection({ order, t, formatDate, onSent }) {
 export default function OrderDetail({ number }) {
   const { t, formatMoney, formatDate } = useI18n();
   const [order, setOrder] = useState(null);
+  const [section, setSection] = useState("summary");
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let active = true;
+    setSection("summary");
+    setError(null);
     setOrder(null);
-    api.getOrder(number).then(setOrder).catch((err) => setError(errorText(t, err.code)));
+    api.getOrder(number).then(data => { if (active) setOrder(data); })
+      .catch(err => { if (active) setError(errorText(t, err.code)); });
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [number]);
 
@@ -359,7 +365,14 @@ export default function OrderDetail({ number }) {
             <span className={`badge ${order.status}`}>{t(`status_${order.status}`)}</span>
           </div>
 
-          <div className="settings-two">
+          <nav className="order-section-bar" aria-label={t("studio_order_sections")}>
+            {[["summary", "studio_order_summary"], ["artwork", "ws_order_proof_section"], ["production", "ws_order_schedule_section"],
+              ["messages", "order_messages_title"]].map(([key, label]) => (
+              <button type="button" key={key} className="btn secondary" aria-pressed={section === key}
+                onClick={() => setSection(key)}>{t(label)}</button>
+            ))}
+          </nav>
+          <div className="settings-two" hidden={section !== "summary"}>
             <div className="stack">
               <section className="card pad">
                 <h3>{t("order_lines_title")}</h3>
@@ -373,15 +386,23 @@ export default function OrderDetail({ number }) {
                 </div>
                 {order.note && <p className="small" style={{ marginTop: 10 }}>{order.note}</p>}
               </section>
-              <ProofSection order={order} t={t} onSent={setOrder} />
-              <ScheduleSection order={order} t={t} onSent={setOrder} />
-              <NotesSection order={order} t={t} onSent={setOrder} />
+
             </div>
             <div className="stack">
               <QuoteSection order={order} t={t} formatMoney={formatMoney} onSent={setOrder} />
-              <StatusSection order={order} t={t} onSent={setOrder} />
-              <MessagesSection order={order} t={t} formatDate={formatDate} onSent={setOrder} />
+
             </div>
+          </div>
+          <div className="order-detail-pane" hidden={section !== "artwork"}>
+            <ProofSection order={order} t={t} onSent={setOrder} />
+          </div>
+          <div className="order-detail-pane stack" hidden={section !== "production"}>
+            <StatusSection order={order} t={t} onSent={setOrder} />
+            <ScheduleSection order={order} t={t} onSent={setOrder} />
+          </div>
+          <div className="order-detail-pane stack" hidden={section !== "messages"}>
+            <MessagesSection order={order} t={t} formatDate={formatDate} onSent={setOrder} />
+            <NotesSection order={order} t={t} onSent={setOrder} />
           </div>
         </>
       )}

@@ -2,6 +2,23 @@
 // Values can be a plain string, or an object keyed by CLDR plural category
 // ({one, few, many, other}) selected through Intl.PluralRules — see lib/i18n/index.jsx `t()`.
 export default {
+  classic_search: "Search",
+  studio_side: "Side of the product",
+  studio_preview: "Interactive product preview",
+  studio_zoom: "Preview zoom",
+  studio_zoom_out: "Zoom out",
+  studio_zoom_in: "Zoom in",
+  studio_zoom_reset: "Reset zoom",
+  studio_reference_only: "Reference dimensions. The workshop confirms the actual print area before production.",
+  studio_guides: "Print guides",
+  studio_order_sections: "Order sections",
+  studio_order_summary: "Summary",
+  studio_customer: "Customer",
+  studio_updated: "Updated",
+  studio_order_filter: "Order status",
+  studio_upcoming: "Upcoming production",
+  studio_no_upcoming: "No upcoming production dates.",
+  studio_download_artwork: "Download artwork (.zip)",
   classic_greeting: "Good morning, Northline.",
   classic_attention: "Here's what needs your attention.",
   classic_demo_preview: "Illustrative preview",

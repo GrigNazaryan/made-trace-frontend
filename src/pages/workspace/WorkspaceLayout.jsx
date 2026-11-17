@@ -50,13 +50,16 @@ export default function WorkspaceLayout({ section, children }) {
         </div>
         <div className="side-section">{t("ws_operations")}</div>
         {NAV.map(([slug, labelKey, icon]) => (
-          <Link key={slug} to={`/workspace/${slug}`} className={`side-link ${section === slug ? "active" : ""}`}>
+          <Link key={slug} to={`/workspace/${slug}`} className={`side-link ${section === slug ? "active" : ""}`} aria-current={section === slug ? "page" : undefined}>
             <ClassicIcon name={icon} /><span>{t(labelKey)}</span>
           </Link>
         ))}
       </aside>
       <main className="workspace-content">
-        <BackButton fallback="/" label={t("account_exit_workspace")} />
+        <div className="workspace-context between wrap">
+          <span className="eyebrow"><ClassicIcon name="home" />{user.workshop?.name || t("ws_your_workspace")}</span>
+          <BackButton fallback="/" label={t("account_exit_workspace")} />
+        </div>
         {children}
       </main>
     </div>

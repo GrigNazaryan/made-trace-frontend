@@ -195,3 +195,248 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.design-editor {
+  container-type: inline-size;
+}
+
+.design-editor .studio-builder {
+  gap: 14px;
+}
+
+.editor-studio {
+  min-width: 0;
+  padding: 14px;
+}
+
+.studio-preview-heading,
+.studio-preview-footer {
+  gap: 10px;
+}
+
+.studio-preview-heading {
+  margin-bottom: 12px;
+}
+
+.studio-preview-heading strong {
+  overflow-wrap: anywhere;
+}
+
+.studio-zoom {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.studio-zoom .btn {
+  min-width: 38px;
+  min-height: 38px;
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-colors {
+  margin-bottom: 10px;
+}
+
+.studio-colors .row {
+  gap: 4px;
+}
+
+.studio-swatch {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.studio-swatch span {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #b6c1d1;
+  border-radius: 50%;
+}
+
+.studio-swatch[aria-pressed="true"] {
+  border-color: var(--blue);
+  background: #eaf1ff;
+}
+
+.design-editor .editor-studio .studio-canvas-shell {
+  padding: 0;
+  width: 100%;
+  max-width: 600px;
+  background: #edf0f3;
+  border: 1px solid #e4e9f1;
+  box-shadow: none;
+  border-radius: 14px;
+}
+
+.studio-preview-footer {
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.studio-preview-footer details {
+  min-width: 0;
+}
+
+.studio-preview-footer details p {
+  margin: 8px 0 0;
+}
+
+.studio-preview-footer .btn[aria-pressed="true"] {
+  background: #edf4ff;
+  color: #2353a5;
+  border-color: #d3e3ff;
+}
+
+.studio-insert .artwork-drop {
+  padding: 14px 10px;
+  text-align: center;
+  border-color: #bfcee2;
+  background: #f7faff;
+  min-height: 116px;
+}
+
+.studio-insert .ui-icon,
+.studio-tool-symbol {
+  width: 19px;
+  height: 19px;
+  color: var(--blue);
+}
+
+@media (min-width: 701px) {
+  .design-editor .studio-builder > .editor-studio { grid-area: preview; }
+}
+
+@container (min-width: 940px) {
+  .design-editor .studio-builder {
+    grid-template-columns: minmax(168px, 210px) minmax(0, 1fr) minmax(208px, 245px);
+    grid-template-areas: "insert preview properties";
+    grid-template-rows: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .design-editor .studio-builder > .editor-studio { order: -1; }
+  .design-editor .studio-builder > .studio-insert:first-child { order: 0; }
+  .design-editor .studio-builder > .editor-properties { order: 1; }
+  .editor-studio { padding: 10px; }
+}
+
+.workspace-context {
+  margin-bottom: 12px;
+}
+
+.workspace-context .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.workspace-context .ui-icon {
+  width: 16px;
+  height: 16px;
+  color: #527dbd;
+}
+
+.upcoming-production {
+  margin-top: 18px;
+}
+
+.workspace-order-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(136px, 200px);
+  gap: 10px;
+  margin: 18px 0;
+  padding: 14px;
+}
+
+.workspace-order-link {
+  display: grid;
+  gap: 4px;
+}
+
+.order-section-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+}
+
+.order-section-bar [aria-pressed="true"] {
+  border-color: #9bbbf0;
+  color: #2254a5;
+  background: #edf4ff;
+}
+
+.workspace-content [hidden] {
+  display: none;
+}
+
+@media (max-width: 680px) {
+  .workspace-order-filters {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .workspace-order-filters select {
+    grid-column: 1 / -1;
+  }
+
+  .workspace-order-table,
+  .workspace-order-table tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .workspace-order-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .workspace-order-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+
+  .workspace-order-table tbody td:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .workspace-order-table tbody td {
+    display: block;
+    min-width: 0;
+    padding: 6px;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .workspace-order-table [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .order-section-bar .btn {
+    flex: 1 0 42%;
+    white-space: normal;
+  }
+}

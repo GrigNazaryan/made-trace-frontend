@@ -49,25 +49,23 @@ export default function Orders() {
     <WorkspaceLayout section="orders">
       <h2>{t("ws_orders_title")}</h2>
 
-      <div className="row wrap" style={{ margin: "18px 0" }}>
+      <form className="card workspace-order-filters" onSubmit={event => { event.preventDefault(); setSearch(q.trim()); }}>
         <input
           className="control"
+          type="search"
+          aria-label={t("ws_orders_search")}
           placeholder={t("ws_orders_search")}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && setSearch(q.trim())}
-          style={{ maxWidth: 320 }}
         />
-        <button className="btn secondary small" onClick={() => setSearch(q.trim())} type="button">
-          ⌕
-        </button>
-        <select className="control" value={status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 200 }}>
+        <button className="btn secondary" type="submit">{t("classic_search")}</button>
+        <select className="control" aria-label={t("studio_order_filter")} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">{t("myorders_filter_all")}</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>{t(`status_${s}`)}</option>
           ))}
         </select>
-      </div>
+      </form>
 
       {error && <div className="notice" role="alert">{error}</div>}
       {orders === null && !error && <p className="small">{t("common_loading")}</p>}
@@ -77,26 +75,29 @@ export default function Orders() {
           <div className="empty"><strong>{t("ws_orders_empty")}</strong></div>
         ) : (
           <div className="table-scroll">
-            <table className="order-table">
+            <table className="order-table workspace-order-table">
               <thead>
                 <tr>
                   <th>{t("order_lines_title")}</th>
-                  <th>Customer</th>
-                  <th>Status</th>
-                  <th>Updated</th>
+                  <th>{t("studio_customer")}</th>
+                  <th>{t("studio_order_filter")}</th>
+                  <th>{t("ws_order_schedule_due")}</th>
+                  <th>{t("studio_updated")}</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((o) => (
                   <tr key={o.id}>
                     <td>
-                      <Link to={`/workspace/orders/${o.id}`}>
-                        <strong>{o.id}</strong> · {o.title}
+                      <Link className="workspace-order-link" to={`/workspace/orders/${o.id}`}>
+                        <span className="small mono">{o.id}</span><strong>{o.title}</strong>
                       </Link>
                     </td>
-                    <td>{o.customer.name}</td>
-                    <td><span className={`badge ${o.status}`}>{t(`status_${o.status}`)}</span></td>
-                    <td>{formatDate(o.updatedAt)}</td>
+                    <td data-label={t("studio_customer")}>{o.customer.name}</td>
+                    <td data-label={t("studio_order_filter")}><span className={`badge ${o.status}`}>{t(`status_${o.status}`)}</span></td>
+                    <td data-label={t("ws_order_schedule_due")}>{o.schedule?.productionDue
+                      ? formatDate(o.schedule.productionDue, { dateStyle: "medium", timeZone: "UTC" }) : "—"}</td>
+                    <td data-label={t("studio_updated")}>{formatDate(o.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>

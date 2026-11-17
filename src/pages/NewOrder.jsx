@@ -294,6 +294,10 @@ export default function NewOrder({ workshopId }) {
       <DesignEditor key={activeEditor} product={editingProduct} color={editingLine.color}
         value={editingLine.design}
         onChange={design => updateLine(activeEditor, {design})}
+        onColorChange={color => {
+          const group = groups.find(item => item.variants.some(variant => variant.localId === activeEditor));
+          if (group) updateGroup(group, {color});
+        }}
         initialSide={editingLine.editorSide || "front"}
         onSideChange={side => updateLine(activeEditor, {editorSide:side})}
         templates={templates[mockup] || []}

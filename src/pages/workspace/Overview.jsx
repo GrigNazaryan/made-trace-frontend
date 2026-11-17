@@ -35,6 +35,8 @@ export default function Overview() {
   const open = (orders || []).filter(order => !CLOSED.includes(order.status));
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0,10);
+  const upcoming = open.filter(order => order.schedule?.productionStart >= today)
+    .sort((a, b) => a.schedule.productionStart.localeCompare(b.schedule.productionStart)).slice(0, 5);
   const categories = {
     requests: open.filter(order => order.status === "request"),
     overdue: open.filter(order => due(order) && due(order) < today),
@@ -85,13 +87,17 @@ export default function Overview() {
         ))}
       </section>}
 
-      <section className="card pad" style={{ marginTop: 18, maxWidth: 320 }}>
-        <span className="eyebrow">{t("ws_overview_open_orders")}</span>
-        <p style={{ fontSize: 32, fontWeight: 700, margin: "8px 0" }}>{orders === null ? "—" : open.length}</p>
-        <Link to="/workspace/orders" className="btn secondary small">
-          {t("ws_overview_go_orders")}
-        </Link>
-      </section>
+      {orders && <section className="card pad upcoming-production">
+        <div className="between wrap">
+          <h3>{t("studio_upcoming")}</h3>
+          <Link to="/workspace/calendar" className="btn secondary small">{t("calendar_title")}</Link>
+        </div>
+        {upcoming.length === 0 && <p className="small">{t("studio_no_upcoming")}</p>}
+        {upcoming.map(order => <Link className="activity-link" key={order.id} to={`/workspace/orders/${order.id}`}>
+          <strong>{order.id} · {order.title}</strong>
+          <span className="small">{formatDate(order.schedule.productionStart, {dateStyle:"medium", timeZone:"UTC"})}</span>
+        </Link>)}
+      </section>}
     </WorkspaceLayout>
   );
 }

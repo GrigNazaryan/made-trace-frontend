@@ -61,7 +61,7 @@ export function createEditor(
   let destroyed = false;
   let guides = true;
   const type = garmentType(product);
-  const background = "#e8ecf0";
+  const background = "#edf0f3";
   canvas.dataset.garmentType = type;
 
   const zone = () => printSurface(type, side, product.printAreas);
@@ -90,6 +90,7 @@ export function createEditor(
   }
   function setGuides(visible) {
     guides = Boolean(visible);
+    canvas.dataset.guides = String(guides && !readOnly);
     draw();
   }
   const history = [clone(state)];
