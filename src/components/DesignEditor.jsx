@@ -31,6 +31,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   const [guides, setGuides] = useState(true);
   const [fontMenu, setFontMenu] = useState(false);
   const [tool, setTool] = useState("layers");
+  const [mobileTool, setMobileTool] = useState(null);
   const [fontLimit, setFontLimit] = useState(12);
   const [fontQuery, setFontQuery] = useState("");
   const selectionId = useRef(null);
@@ -82,13 +83,17 @@ export default function DesignEditor({ product, color, value, onChange, workshop
           setFontMenu(false);
           setFontQuery("");
           setFontLimit(12);
+          setMobileTool(null);
           setTool(layer?.type === "text" ? "text" : layer ? "transform" : "layers");
         }
         setSelected(layer);
       },
       onActivate: layer => {
         if (layer?.type === "text") setInline(true);
-        if (layer?.type === "image") imageToolsRef.current?.focus({ preventScroll: false });
+        if (layer?.type === "image") {
+          setMobileTool("transform");
+          requestAnimationFrame(() => imageToolsRef.current?.focus({ preventScroll: true }));
+        }
       },
       onImageError: () => setUploadError({ message: t("artwork_preview_failed"), preview: true }),
       uploadImage: saveArtwork,
@@ -162,11 +167,15 @@ export default function DesignEditor({ product, color, value, onChange, workshop
     setZoom(next);
     editor?.setZoom(next);
   }
+  const mobileTools = selected?.type === "text"
+    ? [["color", "editor_color"], ["font", "editor_font"], ["size", "editor_size"], ["text", "editor_text"],
+      ["align", "editor_align"], ["transform", "editor_tool_transform"], ["layers", "editor_tool_layers"]]
+    : [["transform", "editor_tool_transform"], ["layers", "editor_tool_layers"]];
   const tools = selected?.type === "text" ? ["text", "transform", "layers"] :
     selected ? ["transform", "layers"] : ["layers"];
 
   return (
-    <div className="design-editor" onKeyDown={event => {
+    <div className="design-editor" data-has-selection={Boolean(selected)} onKeyDown={event => {
       const isEntry = ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName);
       if (isEntry) event.stopPropagation();
       if (isEntry && event.key === "Enter" && !event.nativeEvent.isComposing && event.target.tagName === "INPUT") event.preventDefault();
@@ -298,7 +307,18 @@ export default function DesignEditor({ product, color, value, onChange, workshop
           </div>
         </section>
 
-        <aside className="card editor-panel editor-properties" data-editor-tool={tool}>
+        <aside className="card editor-panel editor-properties" data-editor-tool={tool}
+          data-mobile-tool={mobileTool || "compact"} data-layer-selected={Boolean(selected)}>
+          {selected && <div className="editor-mobile-strip" role="group" aria-label={t("editor_tools")}>
+            {mobileTools.map(([key, label]) => <button key={key} type="button" className="btn secondary small"
+              aria-expanded={mobileTool === key} onClick={() => {
+                setFontMenu(key === "font" && mobileTool !== "font");
+                setMobileTool(current => current === key ? null : key);
+              }}>
+              {key === "color" && <span aria-hidden="true" className="editor-strip-color" style={{ backgroundColor: selected.color }} />}
+              {t(label)}
+            </button>)}
+          </div>}
           <div className="editor-tool-tabs row wrap" role="group" aria-label={t("editor_tools")}>
             {tools.map(name => <button key={name} type="button" className="btn secondary small"
               aria-pressed={tool === name} onClick={() => setTool(name)}>{t("editor_tool_" + name)}</button>)}
@@ -311,7 +331,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
           )}
           {selected?.type === "text" && (
             <div className="stack editor-text-tools" style={{ marginTop: 11 }}>
-              <label className="field">
+              <label className="field" data-text-tool="text">
                 <span className="field-label">{t("editor_text")}</span>
                 <input
                   className="control"
@@ -320,7 +340,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                   onChange={(e) => patch({ text: e.target.value })}
                 />
               </label>
-              <div className="field">
+              <div className="field" data-text-tool="font">
                 <span className="field-label">{t("editor_font")}</span>
                 <button type="button" className="btn secondary small" aria-expanded={fontMenu} aria-label={t("editor_font") + ": " + selected.font}
                   onClick={() => setFontMenu(!fontMenu)} style={{fontFamily: fontStack(selected.font)}}>{selected.font}</button>
@@ -337,7 +357,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                   {filteredFonts.length === 0 && <p className="small">{t("studio_no_fonts")}</p>}
                 </div>}
               </div>
-              <label className="field">
+              <label className="field" data-text-tool="size">
                 <span className="field-label">{t("editor_size")}</span>
                 <input
                   className="control"
@@ -348,13 +368,13 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                   onChange={(e) => patch({ fontSize: Number(e.target.value), stretch: false })}
                 />
               </label>
-              <label className="field">
+              <label className="field" data-text-tool="align">
                 <span className="field-label">{t("editor_align")}</span>
                 <select className="control" value={selected.align || "center"} onChange={event => patch({align: event.target.value})}>
                   {["left", "center", "right"].map(value => <option key={value} value={value}>{t("editor_align_" + value)}</option>)}
                 </select>
               </label>
-              <label className="field">
+              <label className="field" data-text-tool="color">
                 <span className="field-label">{t("editor_color")}</span>
                 <input
                   className="control"
@@ -419,7 +439,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
             {layers.length === 0 && <p className="small">{t("editor_no_layers")}</p>}
             {[...layers].reverse().map((layer, index) => (
               <button key={layer.id} type="button" className="btn secondary small layer-choice"
-                aria-pressed={selected?.id === layer.id} onClick={() => {editor.select(layer.id); setTool("layers");}}>
+                aria-pressed={selected?.id === layer.id} onClick={() => {editor.select(layer.id); setTool("layers"); setMobileTool("layers");}}>
                 {layer.type === "text" ? layer.text || t("editor_text") : t("editor_image_layer", {index:index + 1})}
               </button>
             ))}

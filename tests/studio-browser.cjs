@@ -28,6 +28,14 @@ async function signIn(page,email){
   const page=await context.newPage(); page.setDefaultTimeout(6500);
   const errors=[];
   page.on("pageerror",e=>errors.push(e.message));
+  await page.goto(URL+"/#/pricing");
+  await page.locator(".classic-pricing .plan-card").first().waitFor();
+  assert.equal(await page.locator(".classic-pricing .plan-card").count(),2);
+  assert.match(await page.locator(".classic-pricing .plan-price").first().innerText(),/39/);
+  assert.match(await page.locator(".classic-pricing .plan-price").last().innerText(),/59/);
+  assert.equal(await page.getByText("Planned",{exact:true}).count(),8);
+  assert.equal(await page.getByText("Growth only",{exact:true}).count(),1);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth),0);
   await page.goto(URL);
   const menu=page.getByRole("button",{name:"Menu",exact:true});
   await menu.click();
@@ -78,9 +86,22 @@ async function signIn(page,email){
   await page.getByRole("button",{name:"Design this item",exact:true}).click();
   assert.equal(await page.locator(".order-catalog").count(),0);
   await page.getByRole("button",{name:/Add text/}).click();
-  let textbox=page.getByRole("textbox",{name:"Text",exact:true});
+  const strip=page.locator(".editor-mobile-strip");
+  const textTool=strip.getByRole("button",{name:"Text",exact:true});
+  const fontTool=strip.getByRole("button",{name:"Font",exact:true});
+  const layersTool=strip.getByRole("button",{name:"Layers",exact:true});
+  await strip.waitFor();
+  const touch=await context.newCDPSession(page);
+  const bounds=await strip.boundingBox();
+  for(const [type,x] of [["touchStart",bounds.x+bounds.width-16],["touchMove",bounds.x+bounds.width-96],
+    ["touchMove",bounds.x+80],["touchMove",bounds.x+24],["touchEnd",0]]){
+    await touch.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y:bounds.y+29}]});
+  }
+  assert.ok(await strip.evaluate(el=>el.scrollLeft>0));
+  await textTool.click();
+  const textbox=page.getByRole("textbox",{name:"Text",exact:true});
   await textbox.fill("First layer");
-  await page.locator(".editor-text-tools button[aria-expanded]").first().click();
+  await fontTool.click();
   await page.locator(".editor-font-list input").fill("Caveat");
   const font=page.getByRole("button",{name:"Caveat",exact:true});
   assert.match(await font.evaluate(el=>getComputedStyle(el).fontFamily),/^Caveat/);
@@ -94,11 +115,13 @@ async function signIn(page,email){
   assert.equal(await page.locator(".editor-stage canvas").getAttribute("data-guides"),"false");
   await guides.click();
   await page.locator(".studio-swatch").last().click();
+  await textTool.click();
   assert.equal(await textbox.inputValue(),"First layer");
   assert.equal(await page.locator(".studio-swatch").last().getAttribute("aria-pressed"),"true");
   await page.getByRole("button",{name:/Add text/}).click();
+  await textTool.click();
   await textbox.fill("Second layer");
-  await page.getByRole("button",{name:"Layers",exact:true}).click();
+  await layersTool.click();
   assert.equal(await page.locator(".layer-choice").count(),2);
   await page.getByRole("button",{name:"First layer",exact:true}).click();
   await page.getByRole("button",{name:"Bring forward",exact:true}).click();
@@ -119,7 +142,7 @@ async function signIn(page,email){
   await emptyGesture(false);
   assert.equal(await page.getByRole("button",{name:"Bring forward",exact:true}).count(),0);
   await page.locator(".design-editor input[type=file]").setInputFiles(path.join(__dirname, "../public/mockups/thumbnails/hoodie.png"));
-  await page.getByRole("button",{name:"Layers",exact:true}).click();
+  await layersTool.click();
   await page.waitForFunction(()=>document.querySelectorAll(".layer-choice").length===3);
   console.log("Pointer touch events preserve selection during an empty swipe and clear it on an empty tap. PNG upload creates a layer");
   const layout=[];
@@ -127,9 +150,13 @@ async function signIn(page,email){
    await page.setViewportSize({width,height:932});
    const metrics=await page.evaluate(()=>{const d=document.documentElement,c=document.querySelector(".editor-stage canvas"),p=document.querySelector(".editor-properties");return [innerWidth,d.scrollWidth-d.clientWidth,Math.round(c.getBoundingClientRect().width),getComputedStyle(p).position];});
    layout.push(metrics);
-   assert.ok(metrics[1]===0&&metrics[2]>100&&metrics[3]!=="fixed");
+   assert.ok(metrics[1]===0&&metrics[2]>100&&metrics[3]===(width<=700?"fixed":"static"));
   }
-  console.log("Editor viewport matrix:",JSON.stringify(layout));
+  await page.setViewportSize({width:844,height:390});
+  assert.ok(await page.evaluate(()=>matchMedia("(pointer: coarse)").matches));
+  assert.equal(await page.locator(".editor-properties").evaluate(node=>getComputedStyle(node).position),"fixed");
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth),0);
+  console.log("Editor viewport matrix:",JSON.stringify(layout), "and 844×390 landscape");
   await page.setViewportSize({width:430,height:932});
   await page.getByRole("button",{name:"Finish editing",exact:true}).click();
   assert.equal(await page.locator(".order-catalog").count(),1);
