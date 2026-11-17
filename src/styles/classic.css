@@ -440,3 +440,42 @@
     white-space: normal;
   }
 }
+
+.studio-insert .artwork-drop {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.studio-insert .artwork-drop > * {
+  max-width: 100%;
+}
+
+.studio-insert .artwork-drop small {
+  display: block;
+  line-height: 1.45;
+}
+
+.registration-form {
+  display: grid;
+  gap: 12px;
+}
+
+.registration-form > .field,
+.registration-form > p {
+  margin-block: 0;
+}
+
+.registration-form > p {
+  overflow-wrap: anywhere;
+}
+
+.studio-font-option {
+  justify-content: flex-start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-synthesis: none;
+  font-size: 15px;
+  font-weight: 400;
+}

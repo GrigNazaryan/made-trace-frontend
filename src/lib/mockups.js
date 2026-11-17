@@ -13,7 +13,7 @@ export function garmentType(product = {}) {
   return "tee";
 }
 
-const FILE_BY_TYPE = { tee: "crewneck", hoodie: "hoodie", tank: "tank", tote: "tote" };
+const FILE_BY_TYPE = { tee: "crewneck", hoodie: "hoodie", tank: "tank", tote: "tote", cap: "cap", mug: "mug" };
 export const mockupSource = (type) => `/mockups/${FILE_BY_TYPE[type] || "crewneck"}-pair.png`;
 export const thumbnailSource = (type) => `/mockups/thumbnails/${mockupTypes.includes(type) ? type : "tee"}.png`;
 export const mockupGeometry = Object.freeze({ x: 56, y: 40, width: 488, height: 540 });
@@ -58,15 +58,29 @@ export async function tintedMockup(type, side, color) {
   const key = [type, side, color].join(":");
   if (tints.has(key)) return tints.get(key);
   const isObject = ["cap", "mug"].includes(type);
-  const image = isObject ? null : await loadMockup(type);
+  const image = await loadMockup(type).catch(error => {
+    if (!isObject) throw error;
+    return null;
+  });
   const canvas = document.createElement("canvas");
   canvas.width = 600;
   canvas.height = 650;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  const g = mockupGeometry;
-  if (isObject) manufactureMockup(ctx, type, side);
-  else ctx.drawImage(image, side === "back" ? image.width / 2 : 0, 0, image.width / 2, image.height, g.x, g.y, g.width, g.height);
+  if (image) {
+    const g = type === "cap" ? { x: 54, y: 0, width: 492, height: 656 }
+      : type === "mug" ? { x: side === "back" ? 24 : 76, y: -5, width: 500, height: 667 }
+      : mockupGeometry;
+    ctx.drawImage(image, side === "back" ? image.width / 2 : 0, 0, image.width / 2,
+      image.height, g.x, g.y, g.width, g.height);
+  } else {
+    manufactureMockup(ctx, type, side);
+  }
   const pixels = ctx.getImageData(0, 0, 600, 650);
+  if (isObject) {
+    for (let i = 3; i < pixels.data.length; i += 4) {
+      if (pixels.data[i] < 12) pixels.data[i] = 0;
+    }
+  }
   tintPixels(pixels.data, color);
   ctx.putImageData(pixels, 0, 0);
   if (tints.size > 48) tints.delete(tints.keys().next().value);

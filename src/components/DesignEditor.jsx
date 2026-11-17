@@ -31,6 +31,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   const [guides, setGuides] = useState(true);
   const [fontMenu, setFontMenu] = useState(false);
   const [tool, setTool] = useState("layers");
+  const [fontLimit, setFontLimit] = useState(12);
   const [fontQuery, setFontQuery] = useState("");
   const selectionId = useRef(null);
   const queuedUpload = useRef(false);
@@ -80,6 +81,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
           setInline(false);
           setFontMenu(false);
           setFontQuery("");
+          setFontLimit(12);
           setTool(layer?.type === "text" ? "text" : layer ? "transform" : "layers");
         }
         setSelected(layer);
@@ -154,6 +156,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   const editor = editorRef.current;
   const layers = editor?.allLayers() || [];
   const surface = editor?.surface();
+  const filteredFonts = designFonts.filter(([name]) => name.toLowerCase().includes(fontQuery.trim().toLowerCase()));
   const dimension = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
   function changeZoom(next) {
     setZoom(next);
@@ -323,12 +326,15 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                   onClick={() => setFontMenu(!fontMenu)} style={{fontFamily: fontStack(selected.font)}}>{selected.font}</button>
                 {fontMenu && <div className="editor-font-list">
                   <input type="search" className="control" aria-label={t("editor_font_search")} placeholder={t("editor_font_search")}
-                    value={fontQuery} onChange={event => setFontQuery(event.target.value)} />
-                  {designFonts.filter(([name]) => name.toLowerCase().includes(fontQuery.trim().toLowerCase())).map(([name, stack]) => (
-                    <button type="button" key={name} className="btn secondary small" aria-pressed={selected.font === name}
+                    value={fontQuery} onChange={event => { setFontQuery(event.target.value); setFontLimit(12); }} />
+                  {filteredFonts.slice(0, fontLimit).map(([name, stack]) => (
+                    <button type="button" key={name} aria-pressed={selected.font === name}
                       onClick={() => { patch({ font: name }); setFontMenu(false); }}
-                      style={{fontFamily: stack}}>{name} · Aa Аа</button>
+                      className="btn secondary small studio-font-option" style={{fontFamily: stack}}>{name}</button>
                   ))}
+                  {filteredFonts.length > fontLimit && <button type="button" className="btn secondary small"
+                    onClick={() => setFontLimit(limit => limit + 12)}>{t("orders_load_more")}</button>}
+                  {filteredFonts.length === 0 && <p className="small">{t("studio_no_fonts")}</p>}
                 </div>}
               </div>
               <label className="field">

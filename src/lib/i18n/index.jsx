@@ -104,5 +104,5 @@ export function errorText(t, code) {
   if (!code) return t("common_error_generic");
   const key = `err_${code}`;
   const dict = dictionaries.en;
-  return dict[key] ? t(key) : code;
+  return Object.hasOwn(dict, key) ? t(key) : t("common_error_generic");
 }

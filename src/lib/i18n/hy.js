@@ -1,6 +1,12 @@
 // Draft Armenian translation. The handoff notes these need a native-speaker review
 // before launch — the English/Russian keys are the source of truth until then.
 export default {
+  studio_no_fonts: "Տառատեսակներ չեն գտնվել։",
+  registration_password_hint: "Առնվազն 8 նիշ։",
+  err_invalid_request: "Ստուգեք դաշտերը և կրկին փորձեք։",
+  err_registration_password_short: "Գաղտնաբառը պետք է ունենա առնվազն 8 նիշ։",
+  registration_code_local: "Տեղական տարբերակը կոդը պահում է փորձնական փոստարկղում։ Նամակ չի ուղարկվում։",
+
   "design_variant": "Դիզայն {index}",
   "design_group_total": "Ընդամենը՝ {count} հատ",
   "design_add": "Ավելացնել դիզայն",

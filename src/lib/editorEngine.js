@@ -26,6 +26,7 @@ export function createEditor(
 ) {
   const imgCache = new Map();
   const failedImages = new Set();
+  const requestedFonts = new Set();
 
   function imageFor(src) {
     if (!src || failedImages.has(src)) return null;
@@ -185,7 +186,14 @@ export function createEditor(
     ctx.rotate(((l.rotation || 0) * Math.PI) / 180);
     ctx.globalAlpha = typeof l.opacity === "number" ? l.opacity : 1;
     if (l.type === "text") {
-      ctx.font = `${Math.max(12, l.fontSize || 30)}px ${fontStack(l.font)}`;
+      const family = fontStack(l.font);
+      const sample = /[\u0400-\u052f]/.test(l.text || "") ? "Aa Аа" : "Aa";
+      const fontKey = family + sample;
+      if (document.fonts?.load && !requestedFonts.has(fontKey)) {
+        requestedFonts.add(fontKey);
+        document.fonts.load("16px " + family, sample).then(() => { if (!destroyed) draw(); }).catch(() => {});
+      }
+      ctx.font = `${Math.max(12, l.fontSize || 30)}px ${family}`;
       ctx.fillStyle = l.color || "#234d78";
       ctx.textAlign = l.align || "center";
       ctx.textBaseline = "middle";

@@ -1,5 +1,11 @@
 // German. Falls back to en.js for any key not yet translated here.
 export default {
+  studio_no_fonts: "Keine passenden Schriften.",
+  registration_password_hint: "Mindestens 8 Zeichen.",
+  err_invalid_request: "Prüfen Sie die Felder und versuchen Sie es erneut.",
+  err_registration_password_short: "Das Passwort muss mindestens 8 Zeichen lang sein.",
+  registration_code_local: "Die lokale Vorschau speichert den Code im Testpostfach. Es wird keine E-Mail verschickt.",
+
   "design_variant": "Design {index}",
   "design_group_total": "Stück gesamt: {count}",
   "design_add": "Weiteres Design hinzufügen",

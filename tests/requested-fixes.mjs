@@ -56,3 +56,11 @@ test("failed continuation recovery cannot silently redirect away from an unfinis
   const {destinationAfterAuth}=await server.ssrLoadModule("/src/lib/authReturn.js");
   globalThis.fetch=async()=>{throw Error("offline");};await assert.rejects(destinationAfterAuth("customer"),error=>error.code==="network_error");
 });
+
+test("registration validation strips the submitted password from legacy and current errors", async () => {
+  const fakeSecret = "synthetic-only";
+  globalThis.fetch = async () => answer({detail: [{type:"string_too_short",loc:["body","password"],input:fakeSecret}]},422);
+  await assert.rejects(api.register({password:fakeSecret}), error => error.code === "registration_password_short" && !error.message.includes(fakeSecret));
+  globalThis.fetch = async () => answer({detail: "unexpected HTML " + fakeSecret}, 500);
+  await assert.rejects(api.register({password:fakeSecret}), error => error.code === "http_500" && !error.message.includes(fakeSecret));
+});

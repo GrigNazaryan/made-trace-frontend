@@ -1,4 +1,10 @@
 export default {
+  studio_no_fonts: "Шрифты не найдены.",
+  registration_password_hint: "Минимум 8 символов.",
+  err_invalid_request: "Проверьте поля формы и попробуйте снова.",
+  err_registration_password_short: "В пароле должно быть не менее 8 символов.",
+  registration_code_local: "В локальном предпросмотре код сохраняется в тестовом почтовом ящике. Письмо на ваш адрес не отправляется.",
+
   classic_search: "Поиск",
   studio_side: "Сторона изделия",
   studio_preview: "Интерактивный макет изделия",

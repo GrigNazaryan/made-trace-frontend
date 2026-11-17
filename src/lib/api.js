@@ -80,7 +80,7 @@ async function request(method, path, { body, params, retried = false } = {}) {
   }
 
   if (!response.ok) {
-    const code = (data && (data.detail?.code || data.detail)) || `http_${response.status}`;
+    const code = apiErrorCode(data, response.status);
     if (response.status === 401 && !["/api/auth/login", "/api/auth/admin-login", "/api/auth/register", "/api/auth/refresh", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/google/exchange"].includes(path) && !retried && !impersonating) {
       if (revision !== sessionRevision && (!identity || memoryIdentity !== identity)) throw new ApiError("session_changed", 409);
       const expectedIdentity = identity;
@@ -94,9 +94,21 @@ async function request(method, path, { body, params, retried = false } = {}) {
         throw error;
       }
     }
-    throw new ApiError(typeof code === "string" ? code : JSON.stringify(code), response.status);
+    throw new ApiError(code, response.status);
   }
   return data;
+}
+
+function apiErrorCode(data, status) {
+  const detail = data?.detail;
+  if (Array.isArray(detail)) {
+    if (detail.some(item => item?.type === "string_too_short" && item.loc?.[1] === "password")) {
+      return "registration_password_short";
+    }
+    return "invalid_request";
+  }
+  const code = typeof detail === "string" ? detail : detail?.code;
+  return typeof code === "string" && /^[a-z][a-z0-9_:]{0,95}$/.test(code) ? code : `http_${status}`;
 }
 
 // Binary download (zip) — separate from request() because that always parses JSON,
@@ -110,8 +122,8 @@ export async function downloadArtwork(orderNumber) {
     { credentials: "include", headers });
   if (!response.ok) {
     let code = `http_${response.status}`;
-    try { code = (await response.json())?.detail || code; } catch { /* non-JSON error body */ }
-    throw new ApiError(typeof code === "string" ? code : JSON.stringify(code), response.status);
+    try { code = apiErrorCode(await response.json(), response.status); } catch { /* non-JSON error body */ }
+    throw new ApiError(code, response.status);
   }
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);

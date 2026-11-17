@@ -1,5 +1,11 @@
 // French. Falls back to en.js for any key not yet translated here.
 export default {
+  studio_no_fonts: "Aucune police correspondante.",
+  registration_password_hint: "Au moins 8 caractères.",
+  err_invalid_request: "Vérifiez les champs et réessayez.",
+  err_registration_password_short: "Le mot de passe doit contenir au moins 8 caractères.",
+  registration_code_local: "En aperçu local, le code est enregistré dans la boîte de test. Aucun e-mail n’est envoyé.",
+
   "design_variant": "Design {index}",
   "design_group_total": "Total : {count} pièces",
   "design_add": "Ajouter un design",

@@ -26,6 +26,7 @@ export default function Register() {
   const [city, setCity] = useState("");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [delivery, setDelivery] = useState(null);
   const [ticket, setTicket] = useState("");
   const [code, setCode] = useState("");
   const [createdAccount,setCreatedAccount]=useState(null);
@@ -46,7 +47,10 @@ export default function Register() {
         body.company = { name: companyName.trim(), country, city: city.trim(), services: [], description: "" };
       }
       if (!ticket) {
-        setTicket((await api.register(body)).ticket);
+        if (password.length < 8) { setError(t("err_registration_password_short")); return; }
+        const pending = await api.register(body);
+        setDelivery(pending.delivery);
+        setTicket(pending.ticket);
         return;
       }
       const user = createdAccount || await verifyRegistration({ ticket, code });
@@ -64,7 +68,7 @@ export default function Register() {
       <BackButton fallback="/" />
       <section className="section" style={{ maxWidth: 480, margin: "0 auto" }}>
         <h2>{t("auth_register_title")}</h2>
-        <form onSubmit={onSubmit} className="form">
+        <form onSubmit={onSubmit} className="form registration-form">
           {error && (
             <div className="notice" role="alert">
               {error}
@@ -72,7 +76,7 @@ export default function Register() {
           )}
 
           {ticket ? <>
-            <p>{t("registration_code_sent")} <strong>{email}</strong></p>
+            <p>{delivery === "local" ? t("registration_code_local") : <>{t("registration_code_sent")} <strong>{email}</strong></>}</p>
             <label className="field">
               <span>{t("registration_code")}</span>
               <input className="control" type="text" inputMode="numeric" autoComplete="one-time-code"
@@ -121,10 +125,12 @@ export default function Register() {
               type="password"
               required
               minLength={8}
+              aria-describedby="registration-password-hint"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <span className="small" id="registration-password-hint">{t("registration_password_hint")}</span>
           </label>
 
           {role === "company_owner" && (

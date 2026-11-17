@@ -2,6 +2,12 @@
 // Values can be a plain string, or an object keyed by CLDR plural category
 // ({one, few, many, other}) selected through Intl.PluralRules — see lib/i18n/index.jsx `t()`.
 export default {
+  studio_no_fonts: "No matching fonts.",
+  registration_password_hint: "Use at least 8 characters.",
+  err_invalid_request: "Check the form and try again.",
+  err_registration_password_short: "Use at least 8 characters for your password.",
+  registration_code_local: "This local preview saves the verification code to its test mailbox. It does not send an email.",
+
   classic_search: "Search",
   studio_side: "Side of the product",
   studio_preview: "Interactive product preview",
