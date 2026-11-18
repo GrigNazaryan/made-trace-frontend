@@ -717,3 +717,56 @@ select.control {
   .message-composer { grid-template-columns: minmax(0, 1fr); }
   .message-composer button { justify-self: end; }
 }
+
+.workshop-brand-cover[style*="--workshop-brand-color"] {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--workshop-brand-color) 32%, #eef5ff),
+    color-mix(in srgb, var(--workshop-brand-color) 63%, #fcecdf));
+}
+.workshop-brand-badge {
+  display: grid;
+  place-items: center;
+  width: clamp(66px, 10vw, 108px);
+  height: clamp(66px, 10vw, 108px);
+  border-radius: 50%;
+  background: rgba(255,255,255,.8);
+  border: 1px solid rgba(255,255,255,.82);
+  box-shadow: 0 8px 28px #273d6224;
+  color: #294777;
+  font-weight: 750;
+  font-size: 24px;
+  overflow: hidden;
+}
+.workshop-brand-badge img { display: block; width: 82%; height: 82%; object-fit: contain; }
+.workshop-brand-settings { display: grid; gap: 12px; }
+.workshop-brand-settings .studio-cover { height: 128px; border-radius: 12px; }
+.workshop-brand-settings .studio-cover .workshop-brand-badge { width: 76px; height: 76px; }
+.workshop-brand-settings > button { justify-self: start; }
+.design-export-options { margin: 0 0 12px; }
+.design-export-options .btn { white-space: normal; }
+.active-account-chip { display: flex; align-items: center; gap: 5px; min-width: 0; max-width: 145px; padding: 7px 9px; border-radius: 12px; color: #31558b; background: #eef4ff; font-size: 12px; }
+.active-account-chip .ui-icon { width: 15px; height: 15px; flex: 0 0 15px; }
+.active-account-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
+.account-recent { padding: 10px; background: #f0f5ff; border-radius: 12px; margin-bottom: 14px; }
+.account-recent .row { gap: 5px; }
+.account-recent .btn { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+@media (max-width: 430px) {
+  .topbar-inner { gap: 6px; }
+  .active-account-chip { max-width: 40vw; }
+}
+@media (max-width: 700px), (pointer: coarse) and (max-height: 550px) {
+  .design-editor .editor-properties[data-layer-selected="true"][data-mobile-tool="outline"] > .editor-text-tools {
+    display: flex;
+    padding: 0 8px 8px;
+    margin-top: 0 !important;
+  }
+  .editor-properties[data-mobile-tool="outline"] .editor-text-tools > [data-text-tool="outline"] { display: block; }
+}
+
+.active-account-label strong, .active-account-label small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.active-account-label small { font-size: 10px; color: #4c6590; }

@@ -6,6 +6,8 @@ from pathlib import Path
 from datetime import timezone
 
 root = Path(__file__).resolve().parents[2]
+api_port = int(os.environ.get("MADETRACE_QA_API_PORT", "9043"))
+api_origin = f"http://127.0.0.1:{api_port}"
 data = Path(tempfile.mkdtemp(prefix="madetrace-release-preview-"))
 os.environ.update(DATABASE_URL="sqlite:///" + (data/"test.db").as_posix(),
                   APP_ENV="test", SECRET_KEY="isolated-fixture-preview-signing-key-" * 2,
@@ -25,8 +27,8 @@ from app import storage
 from fastapi import Request, Response, HTTPException
 stored = {}
 storage.storage_configured = lambda: True
-storage.sign_upload = lambda path: {"path": path, "uploadUrl": "http://127.0.0.1:9043/fixture-upload/" + path}
-storage.sign_download = lambda path, **kw: "http://127.0.0.1:9043/fixture-art/" + path
+storage.sign_upload = lambda path: {"path": path, "uploadUrl": api_origin + "/fixture-upload/" + path}
+storage.sign_download = lambda path, **kw: api_origin + "/fixture-art/" + path
 
 @app.put("/fixture-upload/{path:path}")
 async def fixture_upload(path: str, request: Request):
@@ -102,5 +104,5 @@ with TestClient(app, headers={"Origin": "http://127.0.0.1:4212"}) as client:
 
 
 
-print("Local preview ready on 9043 with synthetic fixtures only.", flush=True)
-uvicorn.run(app, host="127.0.0.1", port=9043, log_level="warning")
+print(f"Local preview ready on {api_port} with synthetic fixtures only.", flush=True)
+uvicorn.run(app, host="127.0.0.1", port=api_port, log_level="warning")

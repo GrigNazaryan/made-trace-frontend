@@ -4,7 +4,7 @@ import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { createEditor } from "../lib/editorEngine.js";
 import { normalizeArtwork, readImageSize } from "../lib/supabaseClient.js";
 import { api } from "../lib/api.js";
-import { designFonts, fontStack } from "../lib/fonts.js";
+import { designFonts, fontCategory, fontStack } from "../lib/fonts.js";
 
 /**
  * @param {object} props
@@ -32,6 +32,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   const [fontMenu, setFontMenu] = useState(false);
   const [tool, setTool] = useState("layers");
   const [mobileTool, setMobileTool] = useState(null);
+  const [fontGroup, setFontGroup] = useState("all");
   const [fontLimit, setFontLimit] = useState(12);
   const [fontQuery, setFontQuery] = useState("");
   const selectionId = useRef(null);
@@ -66,6 +67,8 @@ export default function DesignEditor({ product, color, value, onChange, workshop
   const [selected, setSelected] = useState(null);
   const [uploadError, setUploadError] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
   const [, forceRender] = useState(0);
 
   useEffect(() => {
@@ -83,6 +86,7 @@ export default function DesignEditor({ product, color, value, onChange, workshop
           setFontMenu(false);
           setFontQuery("");
           setFontLimit(12);
+          setFontGroup("all");
           setMobileTool(null);
           setTool(layer?.type === "text" ? "text" : layer ? "transform" : "layers");
         }
@@ -158,17 +162,38 @@ export default function DesignEditor({ product, color, value, onChange, workshop
     editorRef.current?.patch(props);
   }
 
+  async function downloadPng(exportSide, preview) {
+    setExportError(false);
+    setExporting(true);
+    try {
+      const blob = await editorRef.current.exportPng(exportSide, preview);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `madetrace-${preview ? "preview" : "artwork"}-${exportSide}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      setExportError(true);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const editor = editorRef.current;
   const layers = editor?.allLayers() || [];
   const surface = editor?.surface();
-  const filteredFonts = designFonts.filter(([name]) => name.toLowerCase().includes(fontQuery.trim().toLowerCase()));
+  const filteredFonts = designFonts.filter(([name]) =>
+    (fontGroup === "all" || fontCategory(name) === fontGroup) && name.toLowerCase().includes(fontQuery.trim().toLowerCase()));
   const dimension = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
   function changeZoom(next) {
     setZoom(next);
     editor?.setZoom(next);
   }
   const mobileTools = selected?.type === "text"
-    ? [["color", "editor_color"], ["font", "editor_font"], ["size", "editor_size"], ["text", "editor_text"],
+    ? [["color", "editor_color"], ["font", "editor_font"], ["size", "editor_size"], ["outline", "text_outline"], ["text", "editor_text"],
       ["align", "editor_align"], ["transform", "editor_tool_transform"], ["layers", "editor_tool_layers"]]
     : [["transform", "editor_tool_transform"], ["layers", "editor_tool_layers"]];
   const tools = selected?.type === "text" ? ["text", "transform", "layers"] :
@@ -202,6 +227,20 @@ export default function DesignEditor({ product, color, value, onChange, workshop
         </div>
       </div>
 
+      <details className="settings-disclosure design-export-options">
+        <summary><ClassicIcon name="download" />{t("png_export")}</summary>
+        <p className="small">{t("png_export_size")}</p>
+        <div className="row wrap">
+          {[false, true].flatMap(preview => ["front","back"].map(exportSide =>
+            <button type="button" key={String(preview) + exportSide} className="btn secondary small"
+              disabled={!editor || uploading || exporting} onClick={() => downloadPng(exportSide, preview)}>
+              {t(preview ? "png_with_product" : "png_artwork")} · {t(product?.mockupType === "mug"
+                ? (exportSide === "front" ? "mug_left" : "mug_right") : "editor_" + exportSide)}
+            </button>))}
+        </div>
+        {exporting && <p className="small" role="status">{t("common_loading")}</p>}
+        {exportError && <p className="notice" role="alert">{t("png_export_error")}</p>}
+      </details>
       <div className="builder studio-builder">
         <aside className="card editor-panel studio-insert">
           <span className="eyebrow">{t("editor_elements")}</span>
@@ -345,6 +384,11 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                 <button type="button" className="btn secondary small" aria-expanded={fontMenu} aria-label={t("editor_font") + ": " + selected.font}
                   onClick={() => setFontMenu(!fontMenu)} style={{fontFamily: fontStack(selected.font)}}>{selected.font}</button>
                 {fontMenu && <div className="editor-font-list">
+                  <select className="control" aria-label={t("font_category")} value={fontGroup}
+                    onChange={event => { setFontGroup(event.target.value); setFontLimit(12); }}>
+                    {["all","sans","serif","display","script","mono"].map(group =>
+                      <option key={group} value={group}>{t("font_group_" + group)}</option>)}
+                  </select>
                   <input type="search" className="control" aria-label={t("editor_font_search")} placeholder={t("editor_font_search")}
                     value={fontQuery} onChange={event => { setFontQuery(event.target.value); setFontLimit(12); }} />
                   {filteredFonts.slice(0, fontLimit).map(([name, stack]) => (
@@ -383,6 +427,18 @@ export default function DesignEditor({ product, color, value, onChange, workshop
                   onChange={(e) => patch({ color: e.target.value })}
                 />
               </label>
+              <div className="studio-outline-controls" data-text-tool="outline">
+                <label className="field">
+                  <span className="field-label">{t("text_outline_width")}</span>
+                  <input className="control" type="range" min={0} max={20} step={1}
+                    value={selected.outlineWidth || 0} onChange={event => patch({outlineWidth:Number(event.target.value)})} />
+                </label>
+                <label className="field">
+                  <span className="field-label">{t("text_outline_color")}</span>
+                  <input className="control" type="color" value={selected.outlineColor || "#ffffff"}
+                    onChange={event => patch({outlineColor:event.target.value})} />
+                </label>
+              </div>
             </div>
           )}
           {selected?.type === "image" && (

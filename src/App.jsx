@@ -63,7 +63,7 @@ function LanguagePicker() {
 
 function Header() {
   const { t } = useI18n();
-  const { user, logout, connectionError, refresh } = useAuth();
+  const { user, logout, connectionError, refresh, isImpersonated } = useAuth();
   const { path, navigate } = useRoute();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef(null);
@@ -121,6 +121,13 @@ function Header() {
           <img className="brand-mark" src="/favicon.svg" width="36" height="36" alt="" />
           <span>MadeTrace<span className="os">OS</span></span>
         </Link>
+        {user && <Link to={isImpersonated ? "/account/security" : "/login"} className="active-account-chip"
+          aria-label={t("account_active") + ": " + user.email + ". " + t("account_switch")} title={user.email}>
+          <ClassicIcon name="users" /><span className="active-account-label">
+            <strong>{user.workshop?.name || user.fullName || user.email}</strong>
+            <small>{user.email}</small>
+          </span>
+        </Link>}
         <button
           type="button"
           ref={menuButton}

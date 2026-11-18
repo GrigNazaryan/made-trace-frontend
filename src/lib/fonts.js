@@ -1,3 +1,27 @@
+import "@fontsource/bricolage-grotesque/latin-400.css";
+import "@fontsource/bricolage-grotesque/latin-ext-400.css";
+import "@fontsource/instrument-serif/latin-400.css";
+import "@fontsource/instrument-serif/latin-ext-400.css";
+import "@fontsource/dm-serif-text/latin-400.css";
+import "@fontsource/dm-serif-text/latin-ext-400.css";
+import "@fontsource/space-mono/latin-400.css";
+import "@fontsource/space-mono/latin-ext-400.css";
+import "@fontsource/alfa-slab-one/latin-400.css";
+import "@fontsource/alfa-slab-one/latin-ext-400.css";
+import "@fontsource/outfit/latin-400.css";
+import "@fontsource/outfit/latin-ext-400.css";
+import "@fontsource/lexend/latin-400.css";
+import "@fontsource/lexend/latin-ext-400.css";
+import "@fontsource/sora/latin-400.css";
+import "@fontsource/sora/latin-ext-400.css";
+import "@fontsource/syne/latin-400.css";
+import "@fontsource/syne/latin-ext-400.css";
+import "@fontsource/urbanist/latin-400.css";
+import "@fontsource/urbanist/latin-ext-400.css";
+import "@fontsource/chivo/latin-400.css";
+import "@fontsource/chivo/latin-ext-400.css";
+import "@fontsource/barlow-condensed/latin-400.css";
+import "@fontsource/barlow-condensed/latin-ext-400.css";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/onest";
 import "@fontsource-variable/commissioner";
@@ -172,6 +196,18 @@ import "@fontsource/righteous/latin-ext-400.css";
 
 // Keep portable artwork families in sync with the backend validation allowlist.
 export const designFonts = [
+  ["Bricolage Grotesque", '"Bricolage Grotesque", Arial, sans-serif'],
+  ["Instrument Serif", '"Instrument Serif", Arial, sans-serif'],
+  ["DM Serif Text", '"DM Serif Text", Arial, sans-serif'],
+  ["Space Mono", '"Space Mono", Arial, sans-serif'],
+  ["Alfa Slab One", '"Alfa Slab One", Arial, sans-serif'],
+  ["Outfit", '"Outfit", Arial, sans-serif'],
+  ["Lexend", '"Lexend", Arial, sans-serif'],
+  ["Sora", '"Sora", Arial, sans-serif'],
+  ["Syne", '"Syne", Arial, sans-serif'],
+  ["Urbanist", '"Urbanist", Arial, sans-serif'],
+  ["Chivo", '"Chivo", Arial, sans-serif'],
+  ["Barlow Condensed", '"Barlow Condensed", Arial, sans-serif'],
   ["Manrope", '"Manrope Variable", Arial, sans-serif'],
   ["Onest", '"Onest Variable", Arial, sans-serif'],
   ["Commissioner", '"Commissioner Variable", Arial, sans-serif'],
@@ -247,3 +283,14 @@ const legacyFonts = [
 
 const stacks = new Map([...designFonts, ...legacyFonts]);
 export const fontStack = name => stacks.get(name) || "Arial, sans-serif";
+
+const categories = {
+  serif: ["Instrument Serif", "DM Serif Text", "PT Serif", "Roboto Slab", "Lora", "Merriweather",
+    "Playfair Display", "Bitter", "Cormorant Garamond", "Source Serif 4", "Noto Serif", "Spectral", "Vollkorn", "Cinzel"],
+  script: ["Caveat", "Pacifico", "Lobster", "Marck Script", "Bad Script"],
+  display: ["Syne", "Alfa Slab One", "Barlow Condensed", "Oswald", "Bebas Neue", "Archivo Black",
+    "Righteous", "Russo One", "Unbounded", "Poiret One"],
+  mono: ["Space Mono", "Fira Code", "IBM Plex Mono", "Anonymous Pro"],
+};
+const groups = new Map(Object.entries(categories).flatMap(([category, names]) => names.map(name => [name, category])));
+export const fontCategory = name => groups.get(name) || "sans";

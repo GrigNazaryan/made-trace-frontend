@@ -1,3 +1,4 @@
+import { forgetAccounts, rememberedAccounts } from "../lib/rememberedAccounts.js";
 import { destinationAfterAuth } from "../lib/authReturn.js";
 import { GoogleButton } from "./AccountSecurity.jsx";
 import { useState } from "react";
@@ -13,8 +14,9 @@ function destinationFor(role) {
 
 export default function Login() {
   const { t } = useI18n();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { navigate } = useRoute();
+  const [recent, setRecent] = useState(rememberedAccounts);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -38,7 +40,17 @@ export default function Login() {
     <div className="page">
       <BackButton fallback="/" />
       <section className="section" style={{ maxWidth: 420, margin: "0 auto" }}>
-        <h2>{t("auth_login_title")}</h2>
+        <h2>{t(user ? "account_switch" : "auth_login_title")}</h2>
+        {user && <p className="small">{t("account_active")}: <strong>{user.email}</strong></p>}
+        {recent.length > 0 && <div className="account-recent">
+          <span className="field-label">{t("account_recent")}</span>
+          <div className="row wrap">{recent.filter(value => value !== user?.email).map(value =>
+            <button key={value} type="button" className="btn secondary small" aria-pressed={email === value}
+              onClick={() => {setEmail(value);setPassword("");}}>{value}</button>)}</div>
+          <button type="button" className="btn quiet small" onClick={() => {forgetAccounts();setRecent([]);}}>
+            {t("account_forget_list")}
+          </button>
+        </div>}
         <form onSubmit={onSubmit} className="form">
           {error && (
             <div className="notice" role="alert">
@@ -71,7 +83,7 @@ export default function Login() {
             {busy ? t("common_loading") : t("auth_submit_login")}
           </button>
         </form>
-        <GoogleButton  />
+        <GoogleButton signIn />
         <p className="small"><Link to="/forgot-password">{t("account_forgot")}</Link></p>
         <p className="small"><Link to="/admin-login">{t("account_admin_login")}</Link></p>
         <p className="small" style={{ marginTop: 16 }}>

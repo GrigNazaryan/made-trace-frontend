@@ -1,6 +1,32 @@
 // Draft Armenian translation. The handoff notes these need a native-speaker review
 // before launch — the English/Russian keys are the source of truth until then.
 export default {
+  google_not_configured: "Google-ով մուտքը հիմա հասանելի չէ։",
+  font_category: "Տառատեսակի կատեգորիա",
+  font_group_all: "Բոլոր ոճերը",
+  font_group_sans: "Առանց զարդագծերի",
+  font_group_serif: "Զարդագծերով",
+  font_group_display: "Շեշտադրող",
+  font_group_script: "Ձեռագիր",
+  font_group_mono: "Հավասարալայն",
+  text_outline: "Եզրագիծ",
+  text_outline_width: "Եզրագծի հաստություն",
+  text_outline_color: "Եզրագծի գույն",
+
+  branding_title: "Ցուցափեղկի ձևավորում",
+  branding_color: "Շապիկի գույն",
+  branding_reset: "Սկզբնական գույներ",
+  branding_remove: "Հեռացնել լոգոն",
+  png_export: "Ներբեռնել PNG",
+  png_export_size: "2 400 × 2 600 պիքսել։",
+  png_with_product: "Ապրանքի նախադիտում",
+  png_artwork: "Թափանցիկ պատկեր",
+  png_export_error: "PNG արտահանումը չհաջողվեց։",
+  account_switch: "Փոխել հաշիվը",
+  account_active: "Ակտիվ հաշիվ",
+  account_recent: "Վերջին հաշիվները այս սարքում",
+  account_forget_list: "Մաքրել ցանկը",
+
   message_sign_you: "Դուք",
   product_photo_upload_failed: "Լուսանկարը չվերբեռնվեց։ Կրկին փորձեք կամ հեռացրեք այն։",
   product_photo_invalid: "Ֆայլը չհաջողվեց բացել որպես աջակցվող պատկեր։",

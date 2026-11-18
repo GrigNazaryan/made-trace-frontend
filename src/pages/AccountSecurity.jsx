@@ -28,14 +28,14 @@ function googleExchange(code, state) {
   return promise;
 }
 
-export function GoogleButton({ disabled = false }) {
+export function GoogleButton({ disabled = false, signIn = false }) {
   const { t } = useI18n();
   const { user, loading } = useAuth();
   const [options, setOptions] = useState(null);
   const [linkError, setLinkError] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => { api.authOptions().then(setOptions).catch(() => setOptions({})); }, []);
-  if (!options?.google) return null;
+  if (!options) return null;
 
   async function start() {
     setBusy(true);
@@ -46,7 +46,7 @@ export function GoogleButton({ disabled = false }) {
       const verifier = hex(bytes);
       const challenge = hex(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
       const query = new URLSearchParams({ challenge, origin: location.origin });
-      if (user) query.set("link", (await api.googleLinkToken()).token);
+      if (user && !signIn) query.set("link", (await api.googleLinkToken()).token);
       sessionStorage.setItem(GOOGLE_VERIFIER_KEY, verifier);
       window.location.assign(BASE_URL + "/api/auth/google/start?" + query);
     } catch (error) {
@@ -56,10 +56,11 @@ export function GoogleButton({ disabled = false }) {
   }
 
   return <div style={{ marginTop: 16 }}>
-    <button className="btn secondary block google-sign-in" type="button" disabled={disabled || busy || loading} onClick={start}>
+    <button className="btn secondary block google-sign-in" type="button" disabled={!options.google || disabled || busy || loading} onClick={start}>
       <img src="/google-sign-in.png" width="18" height="18" alt="" />{t("account_google")}
     </button>
-    {disabled && <p className="small">{t("account_google_company")}</p>}
+    {!options.google && <p className="small" role="status">{t("google_not_configured")}</p>}
+    {options.google && disabled && <p className="small">{t("account_google_company")}</p>}
     {linkError && <p className="notice" role="alert">{linkError}</p>}
   </div>;
 }
@@ -83,7 +84,7 @@ export function OAuthReturn() {
     catch (error) { exchanging = Promise.reject(error); }
     exchanging.then(async data => {
       if (cancelled) return;
-      accept(data);
+      accept(data, true);
       const fallback = data.user.role === "company_owner" ? "/workspace/overview" : "/my-orders";
       const destination = data.linked ? "/account/security" : await destinationAfterAuth(data.user.role).catch(() => fallback);
       if (!cancelled && location.hash.startsWith("#/oauth-return")) {

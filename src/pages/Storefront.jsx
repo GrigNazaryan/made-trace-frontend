@@ -1,3 +1,4 @@
+import WorkshopBrand, { workshopBrandStyle } from "../components/WorkshopBrand.jsx";
 import StoreProductCard from "../components/StoreProductCard.jsx";
 import ClassicIcon from "../components/ClassicIcon.jsx";
 import { useEffect, useState } from "react";
@@ -100,8 +101,8 @@ export default function Storefront({ id }) {
             </Link>}
           </div>
         </div>
-        <div className={`store-visual studio-cover ${workshop.theme || "blue"}`}>
-          <span className="hero-shape">{workshop.initials}</span>
+        <div className={`store-visual studio-cover workshop-brand-cover ${workshop.theme || "blue"}`} style={workshopBrandStyle(workshop)}>
+          <WorkshopBrand workshop={workshop} />
         </div>
       </section>
 

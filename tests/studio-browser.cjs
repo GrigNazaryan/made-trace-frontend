@@ -1,6 +1,7 @@
 
 const {chromium}=require(process.env.MT_PLAYWRIGHT || "playwright");
 const assert=require("node:assert/strict");
+const fs=require("node:fs/promises");
 const path=require("node:path");
 const URL="http://127.0.0.1:4212";
 const localeMatrix=["en","ru","hy","de","fr"];
@@ -36,6 +37,10 @@ async function signIn(page,email){
   assert.equal(await page.getByText("Planned",{exact:true}).count(),8);
   assert.equal(await page.getByText("Growth only",{exact:true}).count(),1);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth),0);
+  await page.goto(URL+"/#/register");
+  await page.locator(".google-sign-in").waitFor();
+  assert.ok(await page.locator(".google-sign-in").isDisabled());
+  await page.getByText("Google sign-in is unavailable on this site right now.",{exact:true}).waitFor();
   await page.goto(URL);
   const menu=page.getByRole("button",{name:"Menu",exact:true});
   await menu.click();
@@ -101,7 +106,41 @@ async function signIn(page,email){
   await textTool.click();
   const textbox=page.getByRole("textbox",{name:"Text",exact:true});
   await textbox.fill("First layer");
+  await strip.getByRole("button",{name:"Outline",exact:true}).click();
+  const stroke=page.getByRole("slider",{name:"Outline thickness",exact:true});
+  await stroke.fill("6");
+  assert.equal(await stroke.inputValue(),"6");
   await fontTool.click();
+  const group=page.getByLabel("Font category",{exact:true});
+  await group.selectOption("serif");
+  await page.getByRole("button",{name:"Instrument Serif",exact:true}).waitFor();
+  assert.equal(await page.getByRole("button",{name:"Outfit",exact:true}).count(),0);
+  await group.selectOption("all");
+  await page.getByText("Download PNG",{exact:true}).click();
+  for (const [label,filename] of [
+    [/Transparent artwork.*Handle on right/, "madetrace-artwork-front.png"],
+    [/Product preview.*Handle on left/, "madetrace-preview-back.png"],
+  ]) {
+    const saved = page.waitForEvent("download");
+    await page.getByRole("button",{name:label}).click();
+    const item=await saved;
+    assert.equal(item.suggestedFilename(),filename);
+    const png=await fs.readFile(await item.path());
+    assert.equal(png.readUInt32BE(16),2400);
+    assert.equal(png.readUInt32BE(20),2600);
+    const alpha=await page.evaluate(async source=>{
+      const image=new Image();
+      image.src=source;
+      await image.decode();
+      const c=document.createElement("canvas"); c.width=32;c.height=32;
+      const ctx=c.getContext("2d");ctx.drawImage(image,0,0,32,32);
+      const pixels=ctx.getImageData(0,0,32,32).data;
+      return [pixels[3],pixels.some((value,index)=>index%4===3&&value>30)];
+    },"data:image/png;base64,"+png.toString("base64"));
+    assert.deepEqual(alpha,[0,true]);
+  }
+  await page.getByText("Download PNG",{exact:true}).click();
+  if (!await page.locator(".editor-font-list input").isVisible()) await fontTool.click();
   await page.locator(".editor-font-list input").fill("Caveat");
   const font=page.getByRole("button",{name:"Caveat",exact:true});
   assert.match(await font.evaluate(el=>getComputedStyle(el).fontFamily),/^Caveat/);
@@ -261,7 +300,7 @@ async function signIn(page,email){
   assert.equal(await noteComposer.getByRole("textbox").inputValue(),"Synthetic private note");
   await shop.unroute("**/api/workspace/orders/*/notes",failedNote);
   await noteComposer.getByRole("button").click();
-  await shop.getByText("Synthetic private note",{exact:true}).waitFor();
+  await shop.locator(".surface p").filter({hasText:"Synthetic private note"}).first().waitFor();
   assert.equal(await shop.locator(".editor-studio").isVisible(),false);
   await sections.nth(1).click();
   assert.equal(await shop.locator(".editor-studio").isVisible(),true);
@@ -352,6 +391,28 @@ async function signIn(page,email){
   console.log("Right-click and long press remove colors through confirmation; calendar keeps fixed cells and opens five orders");
   assert.equal(await pick.inputValue(),"calendar");
   console.log("Workshop mobile section picker opens Calendar");
+  await pick.selectOption("settings");
+  const brand=shop.locator(".workshop-brand-settings");
+  await brand.waitFor();
+  const pickedBrand=brand.getByRole("button",{name:"#785ec0",exact:true});
+  await pickedBrand.click();
+  assert.equal(await pickedBrand.getAttribute("aria-pressed"),"true");
+  const profile=brand.locator("..");
+  await profile.getByRole("button",{name:"Save profile",exact:true}).click();
+  await profile.getByRole("status").filter({hasText:"Saved"}).waitFor();
+  await shop.goto(URL+"/#/directory");
+  await shop.locator('.workshop-brand-cover[style*="#785ec0"]').first().waitFor();
+  await shop.locator(".active-account-chip").click();
+  await shop.getByRole("heading",{name:"Switch account",exact:true}).waitFor();
+  await signIn(shop,"buyer@example.com");
+  await shop.locator(".active-account-chip[title='buyer@example.com']").waitFor();
+  await shop.locator(".active-account-chip").click();
+  const recorded=shop.getByRole("button",{name:"workshop@example.com",exact:true});
+  await recorded.click();
+  assert.equal(await shop.getByRole("textbox",{name:"Email",exact:true}).inputValue(),"workshop@example.com");
+  assert.equal(await shop.getByRole("textbox",{name:"Password",exact:true}).inputValue(),"");
+  console.log("Two PNG downloads have 2400×2600 resolution and alpha; outline and category select work");
+  console.log("Brand color persists in public directory; switching accounts remembers only the address");
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

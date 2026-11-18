@@ -1,3 +1,7 @@
+import FilePicker from "../../components/FilePicker.jsx";
+import ClassicIcon from "../../components/ClassicIcon.jsx";
+import WorkshopBrand, { workshopBrandStyle } from "../../components/WorkshopBrand.jsx";
+import { normalizeArtwork, readImageSize, uploadToStorage } from "../../lib/supabaseClient.js";
 import { confirmNavigation, useUnsavedChanges } from "../../lib/unsavedChanges.js";
 import { Link } from "../../router/HashRouter.jsx";
 import NumberInput from "../../components/NumberInput.jsx";
@@ -19,16 +23,41 @@ function ProfileForm({ workshop, t, onSaved }) {
     public: workshop.public,
     publicContact: workshop.publicContact || { email: "", phone: "", website: "" },
     paymentLink: workshop.paymentLink || "",
+    brandColor: workshop.brandColor || null,
+    logoUrl: workshop.logoUrl || null,
   });
   const [busy, setBusy] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState("");
+  const [localLogo, setLocalLogo] = useState(null);
+  useEffect(() => () => { if (localLogo) URL.revokeObjectURL(localLogo); }, [localLogo]);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
 
   const [savedState, setSavedState] = useState(() => JSON.stringify(form));
-  useUnsavedChanges(JSON.stringify(form) !== savedState, t);
+  useUnsavedChanges(uploadingLogo || JSON.stringify(form) !== savedState, t);
+
+  async function pickLogo(file) {
+    setUploadingLogo(true);
+    setLogoError("");
+    try {
+      const image = await normalizeArtwork(file);
+      const {width, height} = await readImageSize(image);
+      if (width < 2 || height < 2 || width > 4096 || height > 4096) throw new Error("logo");
+      setLocalLogo(URL.createObjectURL(image));
+      const {url} = await uploadToStorage(image, "workshop-logos/" + workshop.id);
+      setForm(current => ({...current, logoUrl:url}));
+    } catch {
+      setLogoError(t("product_photo_upload_failed"));
+    } finally {
+      setLocalLogo(null);
+      setUploadingLogo(false);
+    }
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
+    if (uploadingLogo) return;
     setBusy(true);
     setError(null);
     setSaved(false);
@@ -60,6 +89,33 @@ function ProfileForm({ workshop, t, onSaved }) {
           <span className="field-label">{t("ws_settings_name")}</span>
           <input className="control" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         </label>
+        <fieldset className="workshop-brand-settings">
+          <legend>{t("branding_title")}</legend>
+          <div className={`studio-cover workshop-brand-cover ${workshop.theme || "blue"}`} style={workshopBrandStyle(form)}>
+            <WorkshopBrand workshop={{...form, initials: form.name.trim().slice(0,2).toUpperCase(),
+              logoUrl:localLogo || form.logoUrl}} />
+          </div>
+          <div className="row wrap">
+            {["#4477cc", "#d66b62", "#34846e", "#785ec0", "#bd762f"].map(color =>
+              <button type="button" key={color} aria-label={color} aria-pressed={form.brandColor === color}
+                className="studio-swatch" onClick={() => setForm(current => ({...current, brandColor:color}))}>
+                <span style={{backgroundColor:color}} />
+              </button>)}
+            <label className="catalog-color-picker" style={{"--picked-color":form.brandColor || "#4477cc"}}>
+              <ClassicIcon name="plus" />
+              <input type="color" aria-label={t("branding_color")} value={form.brandColor || "#4477cc"}
+                onChange={event => setForm(current => ({...current, brandColor:event.target.value}))} />
+            </label>
+            <button className="btn secondary small" type="button" onClick={() => setForm(current => ({...current, brandColor:null}))}>
+              {t("branding_reset")}
+            </button>
+          </div>
+          <FilePicker accept="image/png,image/jpeg,image/webp" onFile={pickLogo} disabled={busy || uploadingLogo} fileName="" />
+          {form.logoUrl && <button className="btn secondary small" type="button" disabled={uploadingLogo}
+            onClick={() => setForm(current => ({...current, logoUrl:null}))}>{t("branding_remove")}</button>}
+          {uploadingLogo && <p className="small" role="status">{t("common_loading")}</p>}
+          {logoError && <p className="notice" role="alert">{logoError}</p>}
+        </fieldset>
         <div className="form-cols">
           <label className="field">
             <span className="field-label">{t("ws_settings_country")}</span>
@@ -99,7 +155,7 @@ function ProfileForm({ workshop, t, onSaved }) {
           <input type="checkbox" checked={form.public} onChange={(e) => setForm({ ...form, public: e.target.checked })} />
           <span>{t("ws_settings_public")}</span>
         </label>
-        <button className="btn primary" type="submit" disabled={busy}>
+        <button className="btn primary" type="submit" disabled={busy || uploadingLogo}>
           {busy ? t("common_loading") : t("ws_settings_save")}
         </button>
       </form>

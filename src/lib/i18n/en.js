@@ -2,6 +2,32 @@
 // Values can be a plain string, or an object keyed by CLDR plural category
 // ({one, few, many, other}) selected through Intl.PluralRules — see lib/i18n/index.jsx `t()`.
 export default {
+  google_not_configured: "Google sign-in is unavailable on this site right now.",
+  font_category: "Font category",
+  font_group_all: "All styles",
+  font_group_sans: "Sans serif",
+  font_group_serif: "Serif",
+  font_group_display: "Display",
+  font_group_script: "Handwritten",
+  font_group_mono: "Monospace",
+  text_outline: "Outline",
+  text_outline_width: "Outline thickness",
+  text_outline_color: "Outline color",
+
+  branding_title: "Storefront branding",
+  branding_color: "Banner color",
+  branding_reset: "Original colors",
+  branding_remove: "Remove logo",
+  png_export: "Download PNG",
+  png_export_size: "2,400 × 2,600 pixels per image. Original image detail is preserved at its available resolution.",
+  png_with_product: "Product preview",
+  png_artwork: "Transparent artwork",
+  png_export_error: "Could not export PNG. Check that all artwork images still open and try again.",
+  account_switch: "Switch account",
+  account_active: "Active account",
+  account_recent: "Recent accounts on this device",
+  account_forget_list: "Clear account list",
+
   message_sign_you: "You",
   product_photo_upload_failed: "Photo upload failed. Try again or discard the pending photo.",
   product_photo_invalid: "This file could not be read as a supported image.",

@@ -1,3 +1,4 @@
+import WorkshopBrand, { workshopBrandStyle } from "../components/WorkshopBrand.jsx";
 import ClassicIcon from "../components/ClassicIcon.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
@@ -9,8 +10,8 @@ import { searchWorkshops } from "../lib/workshopSearch.js";
 export function WorkshopCard({ w, t, canOrder }) {
   return (
     <article className="card studio-card">
-      <Link to={`/workshops/${w.id}`} className={`studio-cover ${w.theme || "blue"}`} aria-label={w.name}>
-        <span className="hero-shape">{w.initials}</span>
+      <Link to={`/workshops/${w.id}`} className={`studio-cover workshop-brand-cover ${w.theme || "blue"}`} style={workshopBrandStyle(w)} aria-label={w.name}>
+        <WorkshopBrand workshop={w} />
       </Link>
       <div className="studio-details">
         <span className="eyebrow">{w.city}</span>

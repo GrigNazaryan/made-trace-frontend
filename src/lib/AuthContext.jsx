@@ -1,3 +1,4 @@
+import { rememberAccount, SESSION_CHANGED } from "./rememberedAccounts.js";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { api, getToken, setToken, setImpersonating } from "./api.js";
 
@@ -12,12 +13,16 @@ export function AuthProvider({ children }) {
   const backup = useRef(null);
   const revision = useRef(0);
 
-  const accept = useCallback(data => {
+  const accept = useCallback((data, changed = false) => {
     revision.current++;
     setLoading(false);
     setToken(data.accessToken);
     setUser(data.user);
     setConnectionError(false);
+    if (changed) {
+      rememberAccount(data.user);
+      try { localStorage.setItem(SESSION_CHANGED, crypto.randomUUID()); } catch { /* optional cross-tab sync */ }
+    }
     return data.user;
   }, []);
 
@@ -53,13 +58,26 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("madetrace:session-ended", ended);
   }, []);
 
-  const login = useCallback(async (email, password) => accept(await api.login({ email, password })), [accept]);
-  const adminLogin = useCallback(async (email, password) => accept(await api.adminLogin({ email, password })), [accept]);
-  const verifyRegistration = useCallback(async body => accept(await api.verifyRegistration(body)), [accept]);
+  useEffect(() => {
+    function sync(event) {
+      if (event.key !== SESSION_CHANGED || backup.current) return;
+      revision.current++;
+      setToken("");
+      setUser(null);
+      setLoading(true);
+      refresh();
+    }
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [refresh]);
+
+  const login = useCallback(async (email, password) => accept(await api.login({ email, password }), true), [accept]);
+  const adminLogin = useCallback(async (email, password) => accept(await api.adminLogin({ email, password }), true), [accept]);
+  const verifyRegistration = useCallback(async body => accept(await api.verifyRegistration(body), true), [accept]);
 
   const logout = useCallback(async () => {
     try { await api.logout(); } catch { setConnectionError(true); return false; }
-    backup.current = null; setReadOnly(false); setImpersonating(false); accept({ accessToken: "", user: null }); return true;
+    backup.current = null; setReadOnly(false); setImpersonating(false); accept({ accessToken: "", user: null },true); return true;
   }, [accept]);
 
   const impersonateAs = useCallback(async (token, readOnly) => {

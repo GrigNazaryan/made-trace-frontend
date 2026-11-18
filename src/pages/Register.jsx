@@ -69,7 +69,7 @@ export default function Register() {
       <BackButton fallback="/" />
       <section className="section" style={{ maxWidth: 480, margin: "0 auto" }}>
         <h2>{t("auth_register_title")}</h2>
-        {!ticket && <div className="registration-google"><GoogleButton disabled={role === "company_owner"} /></div>}
+        {!ticket && <div className="registration-google"><GoogleButton signIn disabled={role === "company_owner"} /></div>}
         <form onSubmit={onSubmit} className="form registration-form">
           {error && (
             <div className="notice" role="alert">

@@ -22,13 +22,14 @@ const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || 0));
  */
 export function createEditor(
   canvas,
-  { onChange = () => {}, onSelection = () => {}, onActivate = () => {}, onImageError = () => {}, interactionTarget = canvas, initial = null, color = "#fdfcf9", product = {}, readOnly = false, uploadImage = null, resolveImage = src => Promise.resolve(src) } = {}
+  { onChange = () => {}, onSelection = () => {}, onActivate = () => {}, onImageError = () => {}, interactionTarget = canvas, initial = null, color = "#fdfcf9", product = {}, readOnly = false, exportAssets = null, uploadImage = null, resolveImage = src => Promise.resolve(src) } = {}
 ) {
   const imgCache = new Map();
   const failedImages = new Set();
   const requestedFonts = new Set();
 
   function imageFor(src) {
+    if (exportAssets) return exportAssets.images.get(src);
     if (!src || failedImages.has(src)) return null;
     if (!imgCache.has(src)) {
       const img = new Image();
@@ -48,17 +49,17 @@ export function createEditor(
   }
 
   const ctx = canvas.getContext("2d");
-  const density = Math.min(3, Math.max(2, window.devicePixelRatio || 1));
+  const density = exportAssets ? 4 : Math.min(3, Math.max(2, window.devicePixelRatio || 1));
   canvas.width = W * density;
   canvas.height = H * density;
   let state = clone(initial || { front: [], back: [] });
-  let side = "front";
+  let side = exportAssets?.side || "front";
   let selected = null;
   let zoom = 1;
   let drag = null;
   let tap = null;
   let lastTap = null;
-  let garmentImage = null;
+  let garmentImage = exportAssets?.garment || null;
   let destroyed = false;
   let guides = true;
   const type = garmentType(product);
@@ -142,8 +143,10 @@ export function createEditor(
     ctx.fill();
   }
   function tee() {
-    ctx.fillStyle = background;
-    ctx.fillRect(0, 0, W, H);
+    if (!exportAssets) {
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, W, H);
+    }
     if (garmentImage) {
       ctx.save();
       ctx.shadowColor = "rgba(25,38,56,.17)";
@@ -189,7 +192,7 @@ export function createEditor(
       const family = fontStack(l.font);
       const sample = /[\u0400-\u052f]/.test(l.text || "") ? "Aa Аа" : "Aa";
       const fontKey = family + sample;
-      if (document.fonts?.load && !requestedFonts.has(fontKey)) {
+      if (!exportAssets && document.fonts?.load && !requestedFonts.has(fontKey)) {
         requestedFonts.add(fontKey);
         document.fonts.load("16px " + family, sample).then(() => { if (!destroyed) draw(); }).catch(() => {});
       }
@@ -206,16 +209,23 @@ export function createEditor(
         ctx.translate(startX, 0);
         ctx.scale(w / textWidth, h / (words.length * lineHeight));
       }
+      const outline = Number(l.outlineWidth) || 0;
+      if (outline > 0) {
+        ctx.lineWidth = outline * 2;
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = l.outlineColor || "#ffffff";
+      }
       words.forEach((line, i) => {
         const y = (i - (words.length - 1) / 2) * lineHeight;
-        if (l.stretch) ctx.fillText(line, 0, y);
-        else ctx.fillText(line, startX, y, w);
+        const args = l.stretch ? [line, 0, y] : [line, startX, y, w];
+        if (outline > 0) ctx.strokeText(...args);
+        ctx.fillText(...args);
       });
       if (l.stretch) ctx.restore();
     } else if (l.type === "image") {
       const img = imageFor(l.src);
       if (img?.complete && img.naturalWidth) ctx.drawImage(img, -w / 2, -h / 2, w, h);
-      else {
+      else if (!exportAssets) {
         ctx.fillStyle = "#c8d9f2";
         ctx.fillRect(-w / 2, -h / 2, w, h);
       }
@@ -525,13 +535,18 @@ export function createEditor(
   canvas.dataset.previewMode = readOnly ? "proof" : "editor";
   canvas.dataset.guides = String(!readOnly);
   const onFontsLoaded = () => { if (!destroyed) draw(); };
-  document.fonts?.addEventListener("loadingdone", onFontsLoaded);
-  refreshGarment();
+  if (!exportAssets) {
+    document.fonts?.addEventListener("loadingdone", onFontsLoaded);
+    refreshGarment();
+  }
   draw();
   notify();
 
   return {
     setColor,
+    exportPng: (exportSide, preview) => exportDesignPng({
+      state: getState(), product, color, resolveImage, side: exportSide, preview,
+    }),
     retryImages: () => { failedImages.clear(); draw(); },
     setGuides,
     surface,
@@ -574,4 +589,43 @@ export function createEditor(
       Object.entries(events).forEach(([name, listener]) => interactionTarget.removeEventListener(name, listener));
     },
   };
+}
+
+async function exportDesignPng({ state, product, color, resolveImage, side, preview }) {
+  const layers = (state[side] || []).filter(layer => layer.visible !== false);
+  const images = new Map();
+  const urls = [];
+  try {
+    const imageSources = [...new Set(layers.filter(layer => layer.type === "image").map(layer => layer.src))];
+    const loaded = await Promise.allSettled([
+      ...imageSources.map(async src => {
+        const response = await fetch(await resolveImage(src));
+        if (!response.ok) throw new Error("Export image unavailable");
+        const url = URL.createObjectURL(await response.blob());
+        urls.push(url);
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        images.set(src, image);
+      }),
+      ...layers.filter(layer => layer.type === "text").map(layer =>
+        document.fonts?.load("16px " + fontStack(layer.font), layer.text || "Aa")),
+    ]);
+    if (loaded.some(result => result.status === "rejected")) throw new Error("Export assets unavailable");
+    const garment = preview ? await tintedMockup(garmentType(product), side, color) : null;
+    const target = document.createElement("canvas");
+    const renderer = createEditor(target, {
+      initial: state, product, color, readOnly: true, exportAssets: { side, images, garment },
+    });
+    try {
+      return await new Promise((resolve, reject) => target.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error("PNG unavailable"));
+      }, "image/png"));
+    } finally {
+      renderer.destroy();
+    }
+  } finally {
+    urls.forEach(url => URL.revokeObjectURL(url));
+  }
 }
