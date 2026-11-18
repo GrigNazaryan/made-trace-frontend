@@ -1,3 +1,5 @@
+import FilePicker from "../../components/FilePicker.jsx";
+import EditableColor from "../../components/EditableColor.jsx";
 import StoreProductCard from "../../components/StoreProductCard.jsx";
 import ClassicIcon from "../../components/ClassicIcon.jsx";
 import { useAuth } from "../../lib/AuthContext.jsx";
@@ -74,10 +76,7 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function onPickImage(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  async function onPickImage(file) {
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
       setUploadError(t("artwork_upload_failed"));
       return;
@@ -172,18 +171,21 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
         <legend>{t("editor_color")}</legend>
         <div className="row wrap">
           {selectedColors.map((color, index) => HEX_RE.test(color) && (
-            <button key={color + index} type="button" className="color-dot"
-              title={color} aria-label={`${t("common_delete")} ${color}`}
-              style={{ backgroundColor: color }}
-              onClick={() => set("colors", selectedColors.filter((_, i) => i !== index).join(", "))} />
+            <EditableColor key={color + index} color={color} selected={previewColor === color}
+              onSelect={() => setPickedPreviewColor(color)}
+              onRemove={() => set("colors", selectedColors.filter((_, i) => i !== index).join(", "))} />
           ))}
-          <input type="color" value={nextColor} aria-label={t("catalog_custom_color")}
-            onChange={event => setNextColor(event.target.value)} />
+          <label className="catalog-color-picker" style={{ "--picked-color": nextColor }}>
+            <ClassicIcon name="plus" />
+            <input type="color" value={nextColor} aria-label={t("catalog_custom_color")}
+              onChange={event => setNextColor(event.target.value)} />
+          </label>
           <button type="button" className="btn secondary small"
             onClick={() => set("colors", [...new Set([...selectedColors, nextColor])].join(", "))}>
-            {t("catalog_add_color")}
+            <ClassicIcon name="plus" />{t("catalog_add_color")}
           </button>
         </div>
+        <p className="small" id="catalog-color-hint">{t("catalog_color_hint")}</p>
       </fieldset>
       <fieldset className="stack">
         <legend>{t("editor_size")}</legend>
@@ -204,8 +206,8 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
           </label>
         ))}
       </fieldset>
-      {form.mockupType !== "reference" && <details>
-        <summary>{t("product_print_area")}</summary>
+      {form.mockupType !== "reference" && <details className="settings-disclosure">
+        <summary><ClassicIcon name="shirt" />{t("product_print_area")}</summary>
         <p className="small">{t("product_print_area_note")}</p>
         {!form.printAreas._preset && ["tee","hoodie"].includes(form.mockupType) &&
           <label className="check-row"><input type="checkbox" checked={false} onChange={() =>
@@ -224,8 +226,8 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
           </label>;
         }))}</div>
       </details>}
-      <details>
-        <summary>{t("catalog_advanced_variants")}</summary>
+      <details className="settings-disclosure">
+        <summary><ClassicIcon name="gear" />{t("catalog_advanced_variants")}</summary>
         <label className="field">
           <span className="field-label">{t("ws_product_colors")}</span>
           <input className="control" value={form.colors} onChange={event => set("colors", event.target.value)} />
@@ -235,13 +237,12 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
           <input className="control" value={form.sizes} onChange={event => set("sizes", event.target.value)} />
         </label>
       </details>
-      <label className="field">
+      <div className="field">
         <span className="field-label">{t("product_photo")}</span>
-        {form.image && <img src={form.image} alt="" style={{ width: 120, borderRadius: 8, marginBottom: 8 }} />}
-        <input className="control" type="file" accept="image/png,image/jpeg,image/webp" onChange={onPickImage} disabled={uploading} />
-        {uploading && <span className="small">{t("common_loading")}</span>}
-        {uploadError && <span className="small" style={{ color: "#c44b57" }}>{uploadError}</span>}
-      </label>
+        <FilePicker accept="image/png,image/jpeg,image/webp" onFile={onPickImage} disabled={uploading} />
+        {uploading && <span className="small" role="status">{t("common_loading")}</span>}
+        {uploadError && <span className="small" role="alert">{uploadError}</span>}
+      </div>
       <label className="field">
         <span className="field-label">{t("ws_product_payment_mode")}</span>
         <select className="control" value={form.paymentMode} onChange={(e) => set("paymentMode", e.target.value)}>

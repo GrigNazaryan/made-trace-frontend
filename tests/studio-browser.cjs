@@ -192,7 +192,7 @@ async function signIn(page,email){
   }
   console.log("Upload labels fit in EN/RU/HY/DE/FR at 320, 390, 768 and 1280 px");
   console.log("Two layers reordered; editor restores cart focus; draft resumes after login and from My orders");
-  const shop=await browser.newPage({viewport:{width:430,height:932}});
+  const shop=await browser.newPage({viewport:{width:430,height:932},hasTouch:true});
   await shop.route("**/api/auth/options",route=>route.fulfill({json:{google:true,recovery:false,localOutbox:true}}));
   await shop.goto(URL+"/#/register");
   await shop.locator(".google-sign-in img").waitFor();
@@ -245,9 +245,54 @@ async function signIn(page,email){
     assert.equal(await shop.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth),0);
   }
   await shop.setViewportSize({width:430,height:932});
+  const swatches=shop.locator(".editable-color");
+  assert.equal(await swatches.count(),2);
+  await swatches.first().locator(".catalog-color").click();
+  assert.equal(await swatches.count(),2);
+  await swatches.first().locator(".catalog-color").click({button:"right"});
+  await shop.getByRole("button",{name:"Remove #ffffff",exact:true}).click();
+  assert.equal(await swatches.count(),1);
+  await swatches.first().locator(".catalog-color").dispatchEvent("pointerdown",{pointerType:"touch",clientX:10,clientY:15});
+  await shop.getByRole("button",{name:"Remove #0d1b2a",exact:true}).waitFor();
+  await swatches.first().locator(".catalog-color").dispatchEvent("pointerup",{pointerType:"touch"});
+  await shop.getByRole("button",{name:"Remove #0d1b2a",exact:true}).click();
+  assert.equal(await swatches.count(),0);
+  await shop.getByText("Print area",{exact:true}).last().click();
+  await shop.locator("details.settings-disclosure[open]").waitFor();
+  await shop.getByRole("button",{name:"Choose or drop a file",exact:true}).waitFor();
+
   shop.once("dialog",dialog=>dialog.accept());
+  await pick.selectOption("billing");
+  await shop.getByRole("radio",{name:/Growth/}).check();
+  assert.ok(await shop.getByRole("radio",{name:/Growth/}).isChecked());
+
+  await shop.route("**/api/workspace/orders?**",route=>{
+    const query=new globalThis.URL(route.request().url()).searchParams;
+    if (!query.has("calendarStart")) return route.continue();
+    const day=query.get("calendarStart");
+    return route.fulfill({json:Array.from({length:5},(_,index)=>({
+      id:"MT-test-"+index,status:"production",title:"Long calendar test order ".repeat(6),
+      schedule:{productionStart:day,productionDue:day,promisedDate:day}
+    }))});
+  });
   await pick.selectOption("calendar");
   await shop.getByRole("heading",{name:"Production calendar"}).waitFor();
+  const firstCell=shop.locator(".calendar-cell").first();
+  await firstCell.getByText("+3 more",{exact:true}).waitFor();
+  const sizes=await shop.locator(".calendar-cell").evaluateAll(cells=>[...new Set(cells.map(cell=>cell.getBoundingClientRect().height))]);
+  assert.equal(sizes.length,1);
+  await firstCell.dblclick({position:{x:4,y:118}});
+  const dayDialog=shop.getByRole("dialog");
+  await dayDialog.waitFor();
+  assert.equal(await dayDialog.getByRole("link").count(),5);
+  await shop.keyboard.press("Escape");
+  assert.equal(await dayDialog.isVisible(),false);
+  await firstCell.getByText("+3 more",{exact:true}).click();
+  assert.equal(await dayDialog.getByRole("link").count(),5);
+  await dayDialog.getByRole("button",{name:"Close",exact:true}).click();
+  await shop.getByRole("button",{name:"Day",exact:true}).click();
+  await shop.locator(".calendar-day .calendar-cell").waitFor();
+  console.log("Right-click and long press remove colors through confirmation; calendar keeps fixed cells and opens five orders");
   assert.equal(await pick.inputValue(),"calendar");
   console.log("Workshop mobile section picker opens Calendar");
   assert.deepEqual(errors,[]);

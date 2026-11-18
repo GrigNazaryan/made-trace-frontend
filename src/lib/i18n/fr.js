@@ -1,5 +1,12 @@
 // French. Falls back to en.js for any key not yet translated here.
 export default {
+  control_choose_file: "Choisir ou déposer un fichier",
+  catalog_color_hint: "Cliquez pour prévisualiser. Clic droit ou appui long pour supprimer.",
+  catalog_remove_color: "Supprimer {color}",
+  calendar_open_date: "Ouvrir les commandes du {date}",
+  calendar_more_jobs: "+{count} de plus",
+  calendar_day_empty: "Aucune commande prévue.",
+
   preview_storefront: "Aperçu de la vitrine",
   preview_storefront_description: "La fiche se met à jour pendant la modification. Les clients verront le produit après sa publication.",
   preview_product_placeholder: "Nouveau produit",

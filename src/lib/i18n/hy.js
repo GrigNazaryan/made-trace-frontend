@@ -1,6 +1,13 @@
 // Draft Armenian translation. The handoff notes these need a native-speaker review
 // before launch — the English/Russian keys are the source of truth until then.
 export default {
+  control_choose_file: "Ընտրել կամ քաշել ֆայլը",
+  catalog_color_hint: "Սեղմեք դիտելու համար։ Ջնջելու համար աջ սեղմեք կամ պահեք։",
+  catalog_remove_color: "Ջնջել {color}",
+  calendar_open_date: "Բացել {date} օրվա պատվերները",
+  calendar_more_jobs: "Եվս {count}",
+  calendar_day_empty: "Պատվերներ նախատեսված չեն։",
+
   preview_storefront: "Ցուցափեղկի նախադիտում",
   preview_storefront_description: "Քարտը թարմացվում է խմբագրման ընթացքում։ Գնորդներն ապրանքը կտեսնեն հրապարակումից հետո։",
   preview_product_placeholder: "Նոր ապրանք",

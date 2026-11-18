@@ -2,6 +2,13 @@
 // Values can be a plain string, or an object keyed by CLDR plural category
 // ({one, few, many, other}) selected through Intl.PluralRules — see lib/i18n/index.jsx `t()`.
 export default {
+  control_choose_file: "Choose or drop a file",
+  catalog_color_hint: "Click to preview. Right-click or hold to remove a color.",
+  catalog_remove_color: "Remove {color}",
+  calendar_open_date: "Open orders for {date}",
+  calendar_more_jobs: "+{count} more",
+  calendar_day_empty: "No orders scheduled.",
+
   preview_storefront: "Storefront preview",
   preview_storefront_description: "This card updates as you edit. It becomes visible to customers after publication.",
   preview_product_placeholder: "New product",

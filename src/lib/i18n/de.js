@@ -1,5 +1,12 @@
 // German. Falls back to en.js for any key not yet translated here.
 export default {
+  control_choose_file: "Datei auswählen oder ablegen",
+  catalog_color_hint: "Klicken für die Vorschau. Rechtsklicken oder halten zum Entfernen.",
+  catalog_remove_color: "{color} entfernen",
+  calendar_open_date: "Aufträge am {date} öffnen",
+  calendar_more_jobs: "+{count} weitere",
+  calendar_day_empty: "Keine Aufträge geplant.",
+
   preview_storefront: "Vorschau der Shopseite",
   preview_storefront_description: "Die Karte aktualisiert sich beim Bearbeiten. Kundinnen und Kunden sehen das Produkt nach der Veröffentlichung.",
   preview_product_placeholder: "Neues Produkt",

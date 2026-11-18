@@ -1,4 +1,11 @@
 export default {
+  control_choose_file: "Выбрать или перетащить файл",
+  catalog_color_hint: "Нажмите для предпросмотра. Правый клик или удержание открывают удаление.",
+  catalog_remove_color: "Удалить {color}",
+  calendar_open_date: "Открыть заказы на {date}",
+  calendar_more_jobs: "Ещё {count}",
+  calendar_day_empty: "На этот день заказов нет.",
+
   preview_storefront: "Предпросмотр витрины",
   preview_storefront_description: "Карточка обновляется при редактировании. Покупатели увидят товар после публикации.",
   preview_product_placeholder: "Новый товар",

@@ -1,3 +1,4 @@
+import FilePicker from "../../components/FilePicker.jsx";
 import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
@@ -6,6 +7,7 @@ import { uploadToPrivateStorage } from "../../lib/privateUpload.js";
 import WorkspaceLayout from "./WorkspaceLayout.jsx";
 
 function NewPaymentForm({ info, t, onCreated }) {
+  const { formatMoney } = useI18n();
   const [plan, setPlan] = useState(info.plans[0]?.id || "core");
   const [months, setMonths] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -30,14 +32,19 @@ function NewPaymentForm({ info, t, onCreated }) {
       <h3>{t("ws_billing_new_payment")}</h3>
       <form onSubmit={submit} className="form-cols" style={{ marginTop: 12 }}>
         {error && <div className="notice" role="alert">{error}</div>}
-        <label className="field">
-          <span className="field-label">{t("ws_billing_plan")}</span>
-          <select className="control" value={plan} onChange={(e) => setPlan(e.target.value)}>
-            {info.plans.map((p) => (
-              <option key={p.id} value={p.id}>{p.id} — {p.price} {info.currency}/mo</option>
+        <fieldset className="plan-choice-field">
+          <legend className="field-label">{t("ws_billing_plan")}</legend>
+          <div className="plan-choice-options">
+            {info.plans.map(item => (
+              <label key={item.id} className="plan-choice">
+                <input type="radio" name="billing-plan" value={item.id} checked={plan === item.id}
+                  onChange={event => setPlan(event.target.value)} />
+                <span><strong>{t("pricing_" + item.id + "_name")}</strong>
+                  <small>{formatMoney(item.price, info.currency)} {t("pricing_per_month")}</small></span>
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+        </fieldset>
         <label className="field">
           <span className="field-label">{t("ws_billing_months")}</span>
           <NumberInput className="control" type="number" min={1} max={24} value={months} onChange={(e) => setMonths(e.target.value)} />
@@ -121,10 +128,10 @@ function PaymentRow({ p, t, formatMoney, formatDate, onUpdated }) {
             <span className="field-label">{t("ws_billing_receipt_note")}</span>
             <input className="control" value={note} onChange={(e) => setNote(e.target.value)} />
           </label>
-          <label className="field">
+          <div className="field">
             <span className="field-label">{t("ws_billing_receipt_url")}</span>
-            <input ref={fileRef} className="control" type="file" accept="image/*,application/pdf" />
-          </label>
+            <FilePicker inputRef={fileRef} accept="image/*,application/pdf" disabled={busy} />
+          </div>
           <button className="btn primary small" type="submit" disabled={busy}>
             {busy ? t("common_loading") : t("ws_billing_submit")}
           </button>
