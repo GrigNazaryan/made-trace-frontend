@@ -1,4 +1,13 @@
 const paths = {
+  eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Zm10-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
+  lock: "M5 10h14v11H5V10Zm3 0V7a4 4 0 0 1 8 0v3",
+  enter: "M13 4h7v16h-7M3 12h12m-4-4 4 4-4 4",
+  plus: "M5 12h14M12 5v14",
+  search: "M15 15l5 5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z",
+  mail: "M3 5h18v14H3V5Zm0 1 9 7 9-7",
+  card: "M3 5h18v14H3V5Zm0 5h18m-14 5h3",
+  store: "M3 9l2-5h14l2 5M3 9v4h18V9H3Zm2 4v7h14v-7m-9 7v-5h4v5",
+
   home: "M3 11l9-8 9 8M5 10v11h5v-7h4v7h5V10",
   calendar: "M4 5h16v16H4V5Zm0 5h16M8 3v4m8-4v4M8 14h2m4 0h2m-8 4h2",
   users: "M16 21v-3a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v3M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M17 4a4 4 0 0 1 0 7m2 3a4 4 0 0 1 3 4v3",

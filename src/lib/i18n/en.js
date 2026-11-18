@@ -2,6 +2,10 @@
 // Values can be a plain string, or an object keyed by CLDR plural category
 // ({one, few, many, other}) selected through Intl.PluralRules — see lib/i18n/index.jsx `t()`.
 export default {
+  preview_storefront: "Storefront preview",
+  preview_storefront_description: "This card updates as you edit. It becomes visible to customers after publication.",
+  preview_product_placeholder: "New product",
+
   compare_title: "Daily operations, clearly compared.",
   compare_intro: "Core covers daily orders. Growth adds tools for managing a changing catalog.",
   compare_billing_note: "Subscriptions are activated after payment review.",

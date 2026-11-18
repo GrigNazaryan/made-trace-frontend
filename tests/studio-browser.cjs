@@ -193,7 +193,10 @@ async function signIn(page,email){
   console.log("Upload labels fit in EN/RU/HY/DE/FR at 320, 390, 768 and 1280 px");
   console.log("Two layers reordered; editor restores cart focus; draft resumes after login and from My orders");
   const shop=await browser.newPage({viewport:{width:430,height:932}});
+  await shop.route("**/api/auth/options",route=>route.fulfill({json:{google:true,recovery:false,localOutbox:true}}));
   await shop.goto(URL+"/#/register");
+  await shop.locator(".google-sign-in img").waitFor();
+  await shop.waitForFunction(()=>document.querySelector(".google-sign-in img")?.naturalWidth > 0);
   await shop.getByRole("textbox",{name:"Full name",exact:true}).fill("Synthetic Tester");
   await shop.getByRole("textbox",{name:"Email",exact:true}).fill(`browser-${Date.now()}@example.com`);
   await shop.locator('input[autocomplete="new-password"]').fill("Fixture registration 2026");
@@ -223,6 +226,26 @@ async function signIn(page,email){
   assert.equal(await shop.locator(".editor-studio").isVisible(),false);
   await sections.nth(1).click();
   assert.equal(await shop.locator(".editor-studio").isVisible(),true);
+  await pick.selectOption("products");
+  await shop.getByRole("button",{name:/New product/}).click();
+  const preview=shop.locator(".workshop-live-preview");
+  await preview.getByRole("heading",{name:"Storefront preview",exact:true}).waitFor();
+  await shop.getByRole("textbox",{name:"Name",exact:true}).fill("Live test mug");
+  await shop.getByRole("textbox",{name:"Description",exact:true}).fill("Preview shown before saving");
+  await shop.getByLabel("Mockup type").selectOption("mug");
+  await shop.getByRole("spinbutton",{name:"Selling price",exact:true}).fill("24.5");
+  assert.match(await preview.innerText(),/Live test mug/);
+  assert.match(await preview.innerText(),/Preview shown before saving/);
+  assert.match(await preview.innerText(),/24[.,]50/);
+  assert.match(await preview.innerText(),/One size/);
+  await preview.getByRole("button",{name:"#0d1b2a",exact:true}).click();
+  assert.equal(await preview.getByRole("button",{name:"#0d1b2a",exact:true}).getAttribute("aria-pressed"),"true");
+  for(const width of [320,390,768,1280]){
+    await shop.setViewportSize({width,height:844});
+    assert.equal(await shop.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth),0);
+  }
+  await shop.setViewportSize({width:430,height:932});
+  shop.once("dialog",dialog=>dialog.accept());
   await pick.selectOption("calendar");
   await shop.getByRole("heading",{name:"Production calendar"}).waitFor();
   assert.equal(await pick.inputValue(),"calendar");

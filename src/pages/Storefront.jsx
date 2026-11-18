@@ -1,4 +1,5 @@
-import ProductPreview from "../components/ProductPreview.jsx";
+import StoreProductCard from "../components/StoreProductCard.jsx";
+import ClassicIcon from "../components/ClassicIcon.jsx";
 import { useEffect, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { useAuth } from "../lib/AuthContext.jsx";
@@ -7,7 +8,7 @@ import { api, ApiError } from "../lib/api.js";
 
 export default function Storefront({ id }) {
   const { user } = useAuth();
-  const { t, formatMoney } = useI18n();
+  const { t } = useI18n();
   const [workshop, setWorkshop] = useState(null);
   const [error, setError] = useState(null);
 
@@ -92,10 +93,10 @@ export default function Storefront({ id }) {
           )}
           <div className="row wrap">
             {canOrder && <Link to={`/order/${workshop.id}`} className="btn primary">
-              {t("store_start_order")} →
+              <ClassicIcon name="box" />{t("store_start_order")} →
             </Link>}
             {canOrder && <Link to="/my-orders" className="btn secondary">
-              {t("store_track_order")}
+              <ClassicIcon name="track" />{t("store_track_order")}
             </Link>}
           </div>
         </div>
@@ -113,23 +114,8 @@ export default function Storefront({ id }) {
           </div>
         ) : (
           <div className="products-grid">
-            {products.map((p) => {
-              const Card = canOrder ? Link : "article";
-              const target = canOrder ? {to: "/order/" + workshop.id + "?product=" + encodeURIComponent(p.id)} : {};
-              return (
-              <Card {...target} className="card product-card classic-store-product" key={p.id}>
-                <ProductPreview product={p} color={p.colors?.[0]} />
-                <span className="eyebrow">{p.category}</span>
-                <h3>{p.name}</h3>
-                {p.description && <p className="small">{p.description}</p>}
-                <p className="small">
-                  {(p.sizes || []).join(" · ")}
-                  <br />
-                  {t("store_from")} {formatMoney(p.base, workshop.currency)}
-                </p>
-                {canOrder && <span className="btn soft small">{t("store_start_order")} →</span>}
-              </Card>
-            );})}
+            {products.map(product => <StoreProductCard key={product.id} product={product} currency={workshop.currency}
+              orderTo={canOrder ? "/order/" + workshop.id + "?product=" + encodeURIComponent(product.id) : undefined} />)}
           </div>
         )}
       </section>

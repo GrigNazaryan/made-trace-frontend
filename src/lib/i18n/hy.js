@@ -1,6 +1,10 @@
 // Draft Armenian translation. The handoff notes these need a native-speaker review
 // before launch — the English/Russian keys are the source of truth until then.
 export default {
+  preview_storefront: "Ցուցափեղկի նախադիտում",
+  preview_storefront_description: "Քարտը թարմացվում է խմբագրման ընթացքում։ Գնորդներն ապրանքը կտեսնեն հրապարակումից հետո։",
+  preview_product_placeholder: "Նոր ապրանք",
+
   studio_no_fonts: "Տառատեսակներ չեն գտնվել։",
   registration_password_hint: "Առնվազն 8 նիշ։",
   err_invalid_request: "Ստուգեք դաշտերը և կրկին փորձեք։",

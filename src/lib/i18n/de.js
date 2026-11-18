@@ -1,5 +1,9 @@
 // German. Falls back to en.js for any key not yet translated here.
 export default {
+  preview_storefront: "Vorschau der Shopseite",
+  preview_storefront_description: "Die Karte aktualisiert sich beim Bearbeiten. Kundinnen und Kunden sehen das Produkt nach der Veröffentlichung.",
+  preview_product_placeholder: "Neues Produkt",
+
   studio_no_fonts: "Keine passenden Schriften.",
   registration_password_hint: "Mindestens 8 Zeichen.",
   err_invalid_request: "Prüfen Sie die Felder und versuchen Sie es erneut.",

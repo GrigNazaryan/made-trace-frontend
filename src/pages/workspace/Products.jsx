@@ -1,3 +1,5 @@
+import StoreProductCard from "../../components/StoreProductCard.jsx";
+import ClassicIcon from "../../components/ClassicIcon.jsx";
 import { useAuth } from "../../lib/AuthContext.jsx";
 import { Link } from "../../router/HashRouter.jsx";
 import { printSurface } from "../../lib/printAreas.js";
@@ -31,16 +33,27 @@ function toFormValues(p) {
   };
 }
 
-function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
+function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, error }) {
   const [baseline] = useState(initial);
   const [form, setForm] = useState(baseline);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [pendingPhoto, setPendingPhoto] = useState(null);
+  const [pickedPreviewColor, setPickedPreviewColor] = useState("");
+  const previewHeading = useRef(null);
+  useEffect(() => () => { if (pendingPhoto) URL.revokeObjectURL(pendingPhoto); }, [pendingPhoto]);
 
   const [nextColor, setNextColor] = useState("#3b82f6");
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
   const selectedSizes = form.sizes.split(",").map(size => size.trim()).filter(Boolean);
   const selectedColors = form.colors.split(",").map(color => color.trim()).filter(Boolean);
+
+  const previewColors = selectedColors.filter(color => HEX_RE.test(color));
+  const previewColor = previewColors.includes(pickedPreviewColor) ? pickedPreviewColor : previewColors[0];
+  const previewProduct = {
+    ...form, name: form.name.trim() || t("preview_product_placeholder"),
+    base: Number(form.base) || 0, sizes: selectedSizes, colors: previewColors, image: pendingPhoto || form.image,
+  };
 
   useEffect(() => { onDirty(dirty || uploading); }, [dirty, uploading, onDirty]);
   useEffect(() => {
@@ -65,6 +78,12 @@ function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setUploadError(t("artwork_upload_failed"));
+      return;
+    }
+    setPendingPhoto(URL.createObjectURL(file));
+    setPickedPreviewColor("");
     setUploading(true);
     setUploadError(null);
     try {
@@ -73,6 +92,7 @@ function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
     } catch (err) {
       setUploadError(err.message || String(err));
     } finally {
+      setPendingPhoto(null);
       setUploading(false);
     }
   }
@@ -99,6 +119,18 @@ function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
   }
 
   return (
+    <div className="product-form-preview-layout">
+      <aside className="workshop-live-preview">
+        <h3 ref={previewHeading} tabIndex={-1}><ClassicIcon name="eye" />{t("preview_storefront")}</h3>
+        <p className="small">{t("preview_storefront_description")}</p>
+        <StoreProductCard product={previewProduct} currency={currency} color={previewColor} previewAction />
+        {previewColors.length > 1 && <div className="row wrap workshop-preview-swatches" role="group" aria-label={t("neworder_color")}>
+          {previewColors.map(color => <button key={color} type="button" className="studio-swatch"
+            aria-label={color} aria-pressed={previewColor === color} onClick={() => setPickedPreviewColor(color)}>
+            <span style={{ backgroundColor: color }} />
+          </button>)}
+        </div>}
+      </aside>
     <form onSubmit={submit} className="card pad stack">
       {error && <div className="notice" role="alert">{error}</div>}
       <label className="field">
@@ -237,13 +269,18 @@ function ProductForm({ initial, t, onCancel, onSubmit, onDirty, busy, error }) {
       </label>
       <div className="row wrap">
         <button className="btn primary" type="submit" disabled={busy || uploading}>
-          {busy ? t("common_loading") : t("ws_product_save")}
+          <ClassicIcon name="check" />{busy ? t("common_loading") : t("ws_product_save")}
         </button>
         <button className="btn secondary" type="button" onClick={onCancel}>
           {t("ws_product_cancel")}
         </button>
+        <button className="btn secondary preview-jump" type="button" onClick={() => {
+          previewHeading.current?.scrollIntoView({ block: "start" });
+          previewHeading.current?.focus({ preventScroll: true });
+        }}><ClassicIcon name="eye" />{t("preview_storefront")}</button>
       </div>
     </form>
+    </div>
   );
 }
 
@@ -447,7 +484,7 @@ export default function Products() {
         {!editingId && <Link className="btn secondary" to="/workspace/products/pricing">{t("ws_settings_pricing")}</Link>}
         {editingId === null && (
           <button className="btn primary" onClick={() => { setEditingId("new"); setFormError(null); }}>
-            {t("ws_products_new")}
+            <ClassicIcon name="plus" />{t("ws_products_new")}
           </button>
         )}
       </div>
@@ -457,6 +494,7 @@ export default function Products() {
       {editingId && (
         <div ref={editAnchor} tabIndex={-1} className="catalog-edit-anchor" style={{ marginBottom: 20 }}>
           <ProductForm
+            currency={currency}
             key={editingId}
             initial={editingId === "new" ? emptyForm() : toFormValues(products.find((p) => p.id === editingId))}
             t={t}

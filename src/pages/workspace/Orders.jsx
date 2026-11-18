@@ -1,3 +1,4 @@
+import ClassicIcon from "../../components/ClassicIcon.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
 import { Link } from "../../router/HashRouter.jsx";
@@ -58,7 +59,7 @@ export default function Orders() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <button className="btn secondary" type="submit">{t("classic_search")}</button>
+        <button className="btn secondary" type="submit"><ClassicIcon name="search" />{t("classic_search")}</button>
         <select className="control" aria-label={t("studio_order_filter")} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">{t("myorders_filter_all")}</option>
           {STATUSES.map((s) => (

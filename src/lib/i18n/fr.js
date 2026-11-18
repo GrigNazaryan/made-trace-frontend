@@ -1,5 +1,9 @@
 // French. Falls back to en.js for any key not yet translated here.
 export default {
+  preview_storefront: "Aperçu de la vitrine",
+  preview_storefront_description: "La fiche se met à jour pendant la modification. Les clients verront le produit après sa publication.",
+  preview_product_placeholder: "Nouveau produit",
+
   studio_no_fonts: "Aucune police correspondante.",
   registration_password_hint: "Au moins 8 caractères.",
   err_invalid_request: "Vérifiez les champs et réessayez.",

@@ -573,3 +573,63 @@
 @media (max-width: 700px) {
   .classic-pricing .plan-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.btn > .ui-icon,
+.mainnav .ui-icon,
+.header-actions > a > .ui-icon,
+.workshop-live-preview h3 > .ui-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  vertical-align: middle;
+}
+
+.mainnav a,
+.header-actions > a.small,
+.workshop-live-preview h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.btn.google-sign-in {
+  min-height: 44px;
+  padding-inline: 12px;
+  gap: 10px;
+  border-color: #747775;
+  background: #fff;
+  color: #1f1f1f;
+  white-space: normal;
+}
+
+.google-sign-in img {
+  flex: 0 0 18px;
+  object-fit: contain;
+}
+
+.product-form-preview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(214px, 280px);
+  grid-template-areas: "form preview";
+  align-items: start;
+  gap: 18px;
+}
+
+.product-form-preview-layout > form { grid-area: form; min-width: 0; }
+.workshop-live-preview { grid-area: preview; position: sticky; top: 94px; min-width: 0; }
+.workshop-live-preview h3 { scroll-margin-top: 88px; }
+.workshop-live-preview .product-card { overflow-wrap: anywhere; }
+.workshop-preview-swatches { margin-top: 8px; }
+.btn.preview-jump { display: none; }
+
+@media (max-width: 850px) {
+  .product-form-preview-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "preview" "form";
+  }
+  .workshop-live-preview { position: static; width: 100%; max-width: 360px; }
+  .btn.preview-jump { display: inline-flex; }
+}
+
+.registration-google:has(.google-sign-in) { margin-bottom: 18px; }

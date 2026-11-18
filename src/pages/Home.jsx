@@ -1,3 +1,4 @@
+import ClassicIcon from "../components/ClassicIcon.jsx";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { WorkshopCard } from "./Directory.jsx";
@@ -42,7 +43,7 @@ export default function Home() {
             <p className="lead">{t("home_lead")}</p>
             <div className="actions">
               <Link to="/directory" className="btn primary">
-                {t("home_cta_primary")} <span className="arr">→</span>
+                <ClassicIcon name="search" />{t("home_cta_primary")} <span className="arr">→</span>
               </Link>
               <Link to={destination} aria-disabled={loading || connectionError} onClick={event => { if (loading || connectionError) event.preventDefault(); }} className="btn secondary">
                 {t(destinationLabel || "home_cta_secondary")}

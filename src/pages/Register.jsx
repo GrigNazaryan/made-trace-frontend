@@ -1,3 +1,4 @@
+import ClassicIcon from "../components/ClassicIcon.jsx";
 import { destinationAfterAuth } from "../lib/authReturn.js";
 import { GoogleButton } from "./AccountSecurity.jsx";
 import { useState } from "react";
@@ -68,6 +69,7 @@ export default function Register() {
       <BackButton fallback="/" />
       <section className="section" style={{ maxWidth: 480, margin: "0 auto" }}>
         <h2>{t("auth_register_title")}</h2>
+        {!ticket && <div className="registration-google"><GoogleButton disabled={role === "company_owner"} /></div>}
         <form onSubmit={onSubmit} className="form registration-form">
           {error && (
             <div className="notice" role="alert">
@@ -85,7 +87,7 @@ export default function Register() {
             </label>
             <button className="btn secondary" type="button" disabled={busy} onClick={() => {
               setTicket(""); setCode(""); setError(null);
-            }}>{t("registration_restart")}</button>
+            }}><ClassicIcon name="mail" />{t("registration_restart")}</button>
           </> : <>
           <div className="inline-options" role="radiogroup">
             <label className="chip">
@@ -180,7 +182,6 @@ export default function Register() {
             {busy ? t("common_loading") : t(ticket ? "registration_verify" : "auth_submit_register")}
           </button>
         </form>
-        {!ticket && <GoogleButton disabled={role === "company_owner"} />}
         <p className="small" style={{ marginTop: 16 }}>
           <Link to="/login">{t("auth_switch_to_login")}</Link>
         </p>

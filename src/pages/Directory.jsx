@@ -1,3 +1,4 @@
+import ClassicIcon from "../components/ClassicIcon.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n, errorText } from "../lib/i18n/index.jsx";
 import { Link, BackButton } from "../router/HashRouter.jsx";
@@ -30,10 +31,10 @@ export function WorkshopCard({ w, t, canOrder }) {
         </div>
         <div className="row wrap card-actions">
           <Link to={`/workshops/${w.id}`} className="btn secondary small">
-            {t("dir_view")}
+            <ClassicIcon name="store" />{t("dir_view")}
           </Link>
           {canOrder && <Link to={`/order/${w.id}`} className="btn soft small">
-            {t("dir_quote")} →
+            <ClassicIcon name="box" />{t("dir_quote")} →
           </Link>}
         </div>
       </div>

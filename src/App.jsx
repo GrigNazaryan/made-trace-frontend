@@ -1,3 +1,4 @@
+import ClassicIcon from "./components/ClassicIcon.jsx";
 import WsCalendar from "./pages/workspace/Calendar.jsx";
 import AccountSecurity, { PasswordRecovery, OAuthReturn } from "./pages/AccountSecurity.jsx";
 import { useState, useEffect, useRef } from "react";
@@ -136,43 +137,43 @@ function Header() {
         <div id="header-menu" ref={menuPanel} className={"topbar-collapse" + (menuOpen ? " open" : "")}>
           <nav className="mainnav" aria-label="Main navigation">
             <Link to="/directory" className={path === "/directory" ? "active" : ""} onClick={() => setMenuOpen(false)}>
-              {t("nav_directory")}
+              <ClassicIcon name="search" />{t("nav_directory")}
             </Link>
             <Link to="/for-business" className={path === "/for-business" ? "active" : ""} onClick={() => setMenuOpen(false)}>
-              {t("nav_for_business")}
+              <ClassicIcon name="store" />{t("nav_for_business")}
             </Link>
             <Link to="/pricing" className={path === "/pricing" ? "active" : ""} onClick={() => setMenuOpen(false)}>
-              {t("nav_pricing")}
+              <ClassicIcon name="pricing" />{t("nav_pricing")}
             </Link>
           </nav>
           <div className="header-actions">
             <LanguagePicker />
             {user?.role === "customer" && (
               <Link to="/my-orders" className="btn secondary" onClick={() => setMenuOpen(false)}>
-                {t("nav_my_orders")}
+                <ClassicIcon name="track" />{t("nav_my_orders")}
               </Link>
             )}
             {user?.role === "company_owner" && (
               <Link to="/workspace/overview" className="btn primary" onClick={() => setMenuOpen(false)}>
-                {t("nav_workspace")}
+                <ClassicIcon name="home" />{t("nav_workspace")}
               </Link>
             )}
             {user?.role === "admin" && (
               <Link to="/admin" className="btn primary" onClick={() => setMenuOpen(false)}>
-                {t("nav_admin")}
+                <ClassicIcon name="lock" />{t("nav_admin")}
               </Link>
             )}
             {!user && (
               <>
                 <Link to="/login" className="btn secondary" onClick={() => setMenuOpen(false)}>
-                  {t("nav_login")}
+                  <ClassicIcon name="enter" />{t("nav_login")}
                 </Link>
                 <Link to="/register" className="btn primary" onClick={() => setMenuOpen(false)}>
-                  {t("nav_register")}
+                  <ClassicIcon name="plus" />{t("nav_register")}
                 </Link>
               </>
             )}
-            {user && <Link to="/account/security" className="small">{t("account_security")}</Link>}
+            {user && <Link to="/account/security" className="small"><ClassicIcon name="lock" />{t("account_security")}</Link>}
             {user && (
               <button
                 className="btn secondary logout-button"

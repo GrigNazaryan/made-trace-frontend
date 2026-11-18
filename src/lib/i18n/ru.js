@@ -1,4 +1,8 @@
 export default {
+  preview_storefront: "Предпросмотр витрины",
+  preview_storefront_description: "Карточка обновляется при редактировании. Покупатели увидят товар после публикации.",
+  preview_product_placeholder: "Новый товар",
+
   compare_title: "Тарифы для мастерских",
   compare_intro: "Core закрывает ежедневную работу. Growth упрощает массовое обновление каталога.",
   compare_billing_note: "Подписка активируется после проверки оплаты.",

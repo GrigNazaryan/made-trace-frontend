@@ -56,8 +56,8 @@ export function GoogleButton({ disabled = false }) {
   }
 
   return <div style={{ marginTop: 16 }}>
-    <button className="btn secondary block" type="button" disabled={disabled || busy || loading} onClick={start}>
-      {t("account_google")}
+    <button className="btn secondary block google-sign-in" type="button" disabled={disabled || busy || loading} onClick={start}>
+      <img src="/google-sign-in.png" width="18" height="18" alt="" />{t("account_google")}
     </button>
     {disabled && <p className="small">{t("account_google_company")}</p>}
     {linkError && <p className="notice" role="alert">{linkError}</p>}

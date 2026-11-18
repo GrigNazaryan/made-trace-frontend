@@ -137,7 +137,7 @@ function Messages({ order, t, formatDate, onSend, busy }) {
           disabled={busy}
         />
         <button className="btn primary" type="submit" disabled={busy || !text.trim()}>
-          {t("order_messages_send")}
+          <ClassicIcon name="mail" />{t("order_messages_send")}
         </button>
       </form>
     </section>
@@ -273,7 +273,7 @@ export default function OrderPortal({ number }) {
             {order.paymentPercent >= 100 ? t("order_pay_full_note") : t("order_pay_partial_note", { percent: order.paymentPercent })}
           </p>
           <a className="btn primary" href={payment.url} target="_blank" rel="noopener noreferrer">
-            {t("order_pay")} →
+            <ClassicIcon name="card" />{t("order_pay")} →
           </a>
         </section>
       )}

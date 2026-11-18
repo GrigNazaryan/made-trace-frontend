@@ -1,3 +1,4 @@
+import ClassicIcon from "../components/ClassicIcon.jsx";
 import { collectOrderPages } from "../lib/orderPages.js";
 import { orderPayment } from "../lib/orderPayment.js";
 import { useEffect, useMemo, useState } from "react";
@@ -125,7 +126,7 @@ export default function MyOrders() {
                       <div className="my-order-payment">
                         {payment.url
                           ? <a className="btn primary small" href={payment.url} target="_blank" rel="noopener noreferrer">
-                              {t("order_pay")} →
+                              <ClassicIcon name="card" />{t("order_pay")} →
                             </a>
                           : <p className="small">{t(payment.message)}</p>}
                       </div>
