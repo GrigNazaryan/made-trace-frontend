@@ -1,6 +1,11 @@
 // Draft Armenian translation. The handoff notes these need a native-speaker review
 // before launch — the English/Russian keys are the source of truth until then.
 export default {
+  message_sign_you: "Դուք",
+  product_photo_upload_failed: "Լուսանկարը չվերբեռնվեց։ Կրկին փորձեք կամ հեռացրեք այն։",
+  product_photo_invalid: "Ֆայլը չհաջողվեց բացել որպես աջակցվող պատկեր։",
+  product_photo_discard: "Հեռացնել նոր լուսանկարը",
+
   control_choose_file: "Ընտրել կամ քաշել ֆայլը",
   catalog_color_hint: "Սեղմեք դիտելու համար։ Ջնջելու համար աջ սեղմեք կամ պահեք։",
   catalog_remove_color: "Ջնջել {color}",

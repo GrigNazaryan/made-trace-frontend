@@ -2,11 +2,12 @@ import { useRef, useState } from "react";
 import ClassicIcon from "./ClassicIcon.jsx";
 import { useI18n } from "../lib/i18n/index.jsx";
 
-export default function FilePicker({ inputRef, accept, disabled, onFile }) {
+export default function FilePicker({ inputRef, accept, disabled, onFile, fileName }) {
   const { t } = useI18n();
   const ownInput = useRef(null);
   const input = inputRef || ownInput;
   const [name, setName] = useState("");
+  const displayName = fileName ?? name;
   function select(files) {
     const file = files?.[0];
     if (!file) return;
@@ -30,6 +31,6 @@ export default function FilePicker({ inputRef, accept, disabled, onFile }) {
       }}>
       <ClassicIcon name="upload" />{t("control_choose_file")}
     </button>
-    {name && <span className="small styled-file-name" title={name}>{name}</span>}
+    {displayName && <span className="small styled-file-name" title={displayName}>{displayName}</span>}
   </div>;
 }

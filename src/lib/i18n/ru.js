@@ -1,4 +1,9 @@
 export default {
+  message_sign_you: "Вы",
+  product_photo_upload_failed: "Фото не удалось загрузить. Повторите попытку или уберите новое фото.",
+  product_photo_invalid: "Файл не удалось открыть как поддерживаемое изображение.",
+  product_photo_discard: "Убрать новое фото",
+
   control_choose_file: "Выбрать или перетащить файл",
   catalog_color_hint: "Нажмите для предпросмотра. Правый клик или удержание открывают удаление.",
   catalog_remove_color: "Удалить {color}",

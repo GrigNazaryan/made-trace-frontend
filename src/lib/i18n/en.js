@@ -2,6 +2,11 @@
 // Values can be a plain string, or an object keyed by CLDR plural category
 // ({one, few, many, other}) selected through Intl.PluralRules — see lib/i18n/index.jsx `t()`.
 export default {
+  message_sign_you: "You",
+  product_photo_upload_failed: "Photo upload failed. Try again or discard the pending photo.",
+  product_photo_invalid: "This file could not be read as a supported image.",
+  product_photo_discard: "Discard pending photo",
+
   control_choose_file: "Choose or drop a file",
   catalog_color_hint: "Click to preview. Right-click or hold to remove a color.",
   catalog_remove_color: "Remove {color}",

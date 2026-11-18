@@ -1,3 +1,4 @@
+import MessageComposer from "../components/MessageComposer.jsx";
 import ClassicIcon from "../components/ClassicIcon.jsx";
 import { orderPayment } from "../lib/orderPayment.js";
 import { useEffect, useRef, useState } from "react";
@@ -107,7 +108,6 @@ function ProofCard({ order, t, onApprove, onRevise, busy }) {
 }
 
 function Messages({ order, t, formatDate, onSend, busy }) {
-  const [text, setText] = useState("");
   return (
     <section className="card pad">
       <h3>{t("order_messages_title")}</h3>
@@ -120,26 +120,8 @@ function Messages({ order, t, formatDate, onSend, busy }) {
           </div>
         ))}
       </div>
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!text.trim()) return;
-          onSend(text.trim());
-          setText("");
-        }}
-      >
-        <input
-          className="control"
-          placeholder={t("order_messages_placeholder")}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          disabled={busy}
-        />
-        <button className="btn primary" type="submit" disabled={busy || !text.trim()}>
-          <ClassicIcon name="mail" />{t("order_messages_send")}
-        </button>
-      </form>
+      <MessageComposer placeholder={t("order_messages_placeholder")} buttonText={t("order_messages_send")}
+        onSend={onSend} disabled={busy} />
     </section>
   );
 }
@@ -198,7 +180,7 @@ export default function OrderPortal({ number }) {
     : withBusy(() => api.decideQuote(number, version, decision));
   const onProofApprove = (version) => withBusy(() => api.approveProof(number, version));
   const onProofRevise = version => openRevision("proof", version);
-  const onSendMessage = (text) => withBusy(() => api.sendMessage(number, text));
+  const onSendMessage = async text => setOrder(await api.sendMessage(number, text));
   const onRepeat = () =>
     withBusy(async () => {
       const fresh = await api.repeatOrder(number);

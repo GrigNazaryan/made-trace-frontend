@@ -1,5 +1,10 @@
 // German. Falls back to en.js for any key not yet translated here.
 export default {
+  message_sign_you: "Sie",
+  product_photo_upload_failed: "Das Foto konnte nicht hochgeladen werden. Erneut versuchen oder Foto verwerfen.",
+  product_photo_invalid: "Die Datei konnte nicht als unterstütztes Bild gelesen werden.",
+  product_photo_discard: "Foto verwerfen",
+
   control_choose_file: "Datei auswählen oder ablegen",
   catalog_color_hint: "Klicken für die Vorschau. Rechtsklicken oder halten zum Entfernen.",
   catalog_remove_color: "{color} entfernen",

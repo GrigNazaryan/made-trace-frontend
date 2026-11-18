@@ -223,6 +223,45 @@ async function signIn(page,email){
   await shop.getByRole("button",{name:"Save schedule"}).waitFor();
   await sections.nth(3).click();
   await shop.getByRole("button",{name:"Send", exact:true}).waitFor();
+  let messageRequests=0;
+  let submittedMessage="";
+  const failedMessage = async route => {
+    if (route.request().method()!=="POST") return route.continue();
+    messageRequests += 1;
+    submittedMessage=route.request().postDataJSON().text;
+    if (messageRequests===1) return route.fulfill({status:503,json:{detail:"network_error"}});
+    return route.continue();
+  };
+  await shop.route("**/api/orders/*/messages",failedMessage);
+  const compose=shop.getByPlaceholder("Write a message…");
+  const uniqueMessage="UI retry fixture "+Date.now();
+  await compose.fill(uniqueMessage);
+  await compose.press("Shift+Enter");
+  await compose.pressSequentially("second line");
+  assert.equal(await compose.inputValue(),uniqueMessage+"\nsecond line");
+  await compose.dispatchEvent("keydown",{key:"Enter",isComposing:true});
+  assert.equal(messageRequests,0);
+  await compose.press("Enter");
+  await shop.locator(".message-composer [role=alert]").waitFor();
+  assert.equal(await compose.inputValue(),submittedMessage);
+  await compose.press("Enter");
+  await shop.waitForFunction(()=>document.querySelector('textarea[placeholder="Write a message…"]').value==="");
+  assert.equal(messageRequests,2);
+  const sentMessage=shop.locator(".message").filter({hasText:uniqueMessage});
+  await sentMessage.waitFor();
+  assert.equal(await sentMessage.count(),1);
+  assert.ok((await sentMessage.textContent()).includes("second line"));
+
+  const failedNote = route=>route.fulfill({status:503,json:{detail:"network_error"}});
+  await shop.route("**/api/workspace/orders/*/notes",failedNote);
+  const noteComposer=shop.locator(".message-composer").nth(1);
+  await noteComposer.getByRole("textbox").fill("Synthetic private note");
+  await noteComposer.getByRole("button").click();
+  await noteComposer.getByRole("alert").waitFor();
+  assert.equal(await noteComposer.getByRole("textbox").inputValue(),"Synthetic private note");
+  await shop.unroute("**/api/workspace/orders/*/notes",failedNote);
+  await noteComposer.getByRole("button").click();
+  await shop.getByText("Synthetic private note",{exact:true}).waitFor();
   assert.equal(await shop.locator(".editor-studio").isVisible(),false);
   await sections.nth(1).click();
   assert.equal(await shop.locator(".editor-studio").isVisible(),true);
@@ -238,6 +277,24 @@ async function signIn(page,email){
   assert.match(await preview.innerText(),/Preview shown before saving/);
   assert.match(await preview.innerText(),/24[.,]50/);
   assert.match(await preview.innerText(),/One size/);
+  const mockup = shop.getByLabel("Mockup type");
+  const category = shop.getByRole("textbox",{name:"Category",exact:true});
+  await mockup.selectOption("tee");
+  assert.equal(await category.inputValue(),"Apparel");
+  assert.match(await preview.innerText(),/S · M · L · XL/);
+  await category.fill("Custom category");
+  await mockup.selectOption("mug");
+  assert.equal(await category.inputValue(),"Custom category");
+  await shop.locator('.product-form-preview-layout input[type="file"]').setInputFiles(path.join(__dirname, "../public/mockups/thumbnails/hoodie.png"));
+  await shop.getByText("Photo upload failed. Try again or discard the pending photo.",{exact:true}).waitFor();
+  await preview.locator('img[src^="blob:"]').waitFor();
+  await shop.getByRole("button",{name:"Discard pending photo",exact:true}).click();
+  assert.equal(await preview.locator('img[src^="blob:"]').count(),0);
+  assert.equal(await shop.locator(".styled-file-name").count(),0);
+  await shop.locator('.product-form-preview-layout input[type="file"]').setInputFiles({
+    name:"corrupted.png",mimeType:"image/png",buffer:Buffer.from([137,80,78,71,13,10,26,10,0]),
+  });
+  await shop.getByText("This file could not be read as a supported image.",{exact:true}).waitFor();
   await preview.getByRole("button",{name:"#0d1b2a",exact:true}).click();
   assert.equal(await preview.getByRole("button",{name:"#0d1b2a",exact:true}).getAttribute("aria-pressed"),"true");
   for(const width of [320,390,768,1280]){

@@ -1,3 +1,4 @@
+import MessageComposer from "../../components/MessageComposer.jsx";
 import { useUnsavedChanges } from "../../lib/unsavedChanges.js";
 import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useState } from "react";
@@ -255,22 +256,6 @@ function ScheduleSection({ order, t, onSent }) {
 }
 
 function NotesSection({ order, t, onSent }) {
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function add(e) {
-    e.preventDefault();
-    if (!text.trim()) return;
-    setBusy(true);
-    try {
-      const updated = await api.addNote(order.id, { text: text.trim() });
-      onSent(updated);
-      setText("");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <section className="card pad">
       <h3>{t("ws_order_notes_section")}</h3>
@@ -281,33 +266,13 @@ function NotesSection({ order, t, onSent }) {
           </div>
         ))}
       </div>
-      <form onSubmit={add} className="row">
-        <input className="control" placeholder={t("ws_order_notes_placeholder")} value={text} onChange={(e) => setText(e.target.value)} />
-        <button className="btn secondary" type="submit" disabled={busy || !text.trim()}>
-          {t("ws_order_notes_add")}
-        </button>
-      </form>
+      <MessageComposer secondary placeholder={t("ws_order_notes_placeholder")} buttonText={t("ws_order_notes_add")}
+        onSend={async text => onSent(await api.addNote(order.id, { text }))} />
     </section>
   );
 }
 
 function MessagesSection({ order, t, formatDate, onSent }) {
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function send(e) {
-    e.preventDefault();
-    if (!text.trim()) return;
-    setBusy(true);
-    try {
-      const updated = await api.sendMessage(order.id, text.trim());
-      onSent(updated);
-      setText("");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <section className="card pad">
       <h3>{t("order_messages_title")}</h3>
@@ -315,17 +280,13 @@ function MessagesSection({ order, t, formatDate, onSent }) {
         {order.messages.length === 0 && <p className="small">{t("order_messages_empty")}</p>}
         {order.messages.map((m) => (
           <div key={m.id} className={`message ${m.from === "staff" ? "staff" : ""}`}>
-            <div className="meta">{m.from === "staff" ? "You" : "Customer"} · {formatDate(m.createdAt)}</div>
+            <div className="meta">{t(m.from === "staff" ? "message_sign_you" : "studio_customer")} · {formatDate(m.createdAt)}</div>
             {m.text}
           </div>
         ))}
       </div>
-      <form onSubmit={send} className="row">
-        <input className="control" placeholder={t("order_messages_placeholder")} value={text} onChange={(e) => setText(e.target.value)} />
-        <button className="btn primary" type="submit" disabled={busy || !text.trim()}>
-          {t("order_messages_send")}
-        </button>
-      </form>
+      <MessageComposer placeholder={t("order_messages_placeholder")} buttonText={t("order_messages_send")}
+        onSend={async text => onSent(await api.sendMessage(order.id, text))} />
     </section>
   );
 }

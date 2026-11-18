@@ -1,3 +1,4 @@
+import { productDefaults, switchProductType } from "../../lib/productDefaults.js";
 import FilePicker from "../../components/FilePicker.jsx";
 import EditableColor from "../../components/EditableColor.jsx";
 import StoreProductCard from "../../components/StoreProductCard.jsx";
@@ -10,7 +11,7 @@ import NumberInput from "../../components/NumberInput.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, errorText } from "../../lib/i18n/index.jsx";
 import { api } from "../../lib/api.js";
-import { uploadToStorage } from "../../lib/supabaseClient.js";
+import { normalizeArtwork, readImageSize, uploadToStorage } from "../../lib/supabaseClient.js";
 import WorkspaceLayout from "./WorkspaceLayout.jsx";
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
@@ -40,13 +41,19 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
   const [form, setForm] = useState(baseline);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [pendingFile, setPendingFile] = useState(null);
+  const photoBusy = useRef(false);
+  const custom = useRef({
+    category: baseline.category !== productDefaults(baseline.mockupType).category,
+    sizes: baseline.sizes !== productDefaults(baseline.mockupType).sizes,
+  });
   const [pendingPhoto, setPendingPhoto] = useState(null);
   const [pickedPreviewColor, setPickedPreviewColor] = useState("");
   const previewHeading = useRef(null);
   useEffect(() => () => { if (pendingPhoto) URL.revokeObjectURL(pendingPhoto); }, [pendingPhoto]);
 
   const [nextColor, setNextColor] = useState("#3b82f6");
-  const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
+  const dirty = Boolean(pendingFile) || JSON.stringify(form) !== JSON.stringify(baseline);
   const selectedSizes = form.sizes.split(",").map(size => size.trim()).filter(Boolean);
   const selectedColors = form.colors.split(",").map(color => color.trim()).filter(Boolean);
 
@@ -73,32 +80,55 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
   }, [dirty, uploading, t]);
 
   function set(key, value) {
+    if (key === "category" || key === "sizes") custom.current[key] = true;
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function onPickImage(file) {
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setUploadError(t("artwork_upload_failed"));
-      return;
-    }
-    setPendingPhoto(URL.createObjectURL(file));
-    setPickedPreviewColor("");
-    setUploading(true);
+  async function sendPhoto(file) {
+    setPendingFile(file);
     setUploadError(null);
     try {
       const { url } = await uploadToStorage(file, "products");
       set("image", url);
+      discardPhoto();
+    } catch {
+      setUploadError(t("product_photo_upload_failed"));
+    }
+  }
+
+  function discardPhoto() {
+    setPendingFile(null);
+    setPendingPhoto(null);
+    setUploadError(null);
+  }
+
+  async function onPickImage(file) {
+    if (photoBusy.current) return;
+    photoBusy.current = true;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const normalized = await normalizeArtwork(file);
+      const {width, height} = await readImageSize(normalized);
+      if (width <= 1 || height <= 1 || width > 12000 || height > 12000 || width * height > 40_000_000) {
+        setUploadError(t("product_photo_invalid"));
+        return;
+      }
+      setPendingPhoto(URL.createObjectURL(normalized));
+      setPickedPreviewColor("");
+      await sendPhoto(normalized);
     } catch (err) {
-      setUploadError(err.message || String(err));
+      const known = ["artwork_size_limit", "artwork_type_limit", "artwork_heic_unsupported"];
+      setUploadError(t(known.includes(err.message) ? err.message : "product_photo_invalid"));
     } finally {
-      setPendingPhoto(null);
+      photoBusy.current = false;
       setUploading(false);
     }
   }
 
   function submit(e) {
     e.preventDefault();
-    if (uploading) return;
+    if (uploading || pendingFile) return;
     const colors = selectedColors;
     const invalid = colors.find((c) => !HEX_RE.test(c));
     if (invalid) {
@@ -149,9 +179,7 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
           <span className="field-label">{t("ws_product_mockup")}</span>
           <select className="control" value={form.mockupType} onChange={event => {
             const type = event.target.value;
-            setForm(current => ({...current, mockupType:type, printAreas: {_preset:{version:2}},
-              sizes: ["cap","mug"].includes(type) ? "One size" : current.sizes,
-              category: type === "mug" ? "Drinkware" : type === "cap" ? "Headwear" : current.category}));
+            setForm(current => switchProductType(current, type, custom.current));
           }}>
             {MOCKUP_TYPES.map((m) => (
               <option key={m} value={m}>{t("mockup_" + m)}</option>
@@ -239,9 +267,13 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
       </details>
       <div className="field">
         <span className="field-label">{t("product_photo")}</span>
-        <FilePicker accept="image/png,image/jpeg,image/webp" onFile={onPickImage} disabled={uploading} />
+        <FilePicker accept="image/png,image/jpeg,image/webp,.heic,.heif" onFile={onPickImage} disabled={uploading} fileName={pendingFile?.name || ""} />
         {uploading && <span className="small" role="status">{t("common_loading")}</span>}
         {uploadError && <span className="small" role="alert">{uploadError}</span>}
+        {pendingFile && !uploading && <div className="row wrap">
+          <button type="button" className="btn secondary small" onClick={() => onPickImage(pendingFile)}>{t("account_retry")}</button>
+          <button type="button" className="btn secondary small" onClick={discardPhoto}>{t("product_photo_discard")}</button>
+        </div>}
       </div>
       <label className="field">
         <span className="field-label">{t("ws_product_payment_mode")}</span>
@@ -269,7 +301,7 @@ function ProductForm({ initial, currency, t, onCancel, onSubmit, onDirty, busy, 
         <span>{t("ws_product_published")}</span>
       </label>
       <div className="row wrap">
-        <button className="btn primary" type="submit" disabled={busy || uploading}>
+        <button className="btn primary" type="submit" disabled={busy || uploading || Boolean(pendingFile)}>
           <ClassicIcon name="check" />{busy ? t("common_loading") : t("ws_product_save")}
         </button>
         <button className="btn secondary" type="button" onClick={onCancel}>

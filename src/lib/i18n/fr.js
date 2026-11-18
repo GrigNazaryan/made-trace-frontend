@@ -1,5 +1,10 @@
 // French. Falls back to en.js for any key not yet translated here.
 export default {
+  message_sign_you: "Vous",
+  product_photo_upload_failed: "Le téléversement a échoué. Réessayez ou retirez la photo en attente.",
+  product_photo_invalid: "Impossible de lire ce fichier comme une image prise en charge.",
+  product_photo_discard: "Retirer la photo en attente",
+
   control_choose_file: "Choisir ou déposer un fichier",
   catalog_color_hint: "Cliquez pour prévisualiser. Clic droit ou appui long pour supprimer.",
   catalog_remove_color: "Supprimer {color}",
